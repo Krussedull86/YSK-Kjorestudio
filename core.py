@@ -8,8 +8,13 @@ class Store:
   with self.conn() as c:
    c.execute('CREATE TABLE IF NOT EXISTS trips (id TEXT PRIMARY KEY, driver TEXT NOT NULL, course TEXT NOT NULL, vehicle TEXT NOT NULL, trip INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(driver,course,vehicle,trip))')
    c.execute('CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY, payload TEXT)')
+ @contextlib.contextmanager
  def conn(self):
-  c=sqlite3.connect(self.path,timeout=10); c.execute('PRAGMA journal_mode=WAL'); return c
+  c=sqlite3.connect(self.path,timeout=10)
+  try:
+   c.execute('PRAGMA journal_mode=WAL')
+   with c:yield c
+  finally:c.close()
  def settings(self):
   with self.conn() as c: r=c.execute('SELECT payload FROM settings WHERE id=1').fetchone()
   return json.loads(r[0]) if r else dict(WEIGHTS)
@@ -61,7 +66,8 @@ class Store:
  def delete(self,id):
   with self.conn() as c:c.execute('DELETE FROM trips WHERE id=?',(id,))
  def backup(self,path):
-  with self.conn() as src,sqlite3.connect(path) as dst:src.backup(dst)
+  with self.conn() as src,contextlib.closing(sqlite3.connect(path)) as dst:
+   with dst:src.backup(dst)
 def metrics(d):return {'tid':d['minutes']/d['km'],'forbruk':d['liters']/d['km'],'stopp':d['stops']/d['km'],'forbruk10':10*d['liters']/d['km'],'fart':d.get('average_speed',60*d['km']/d['minutes'])}
 def ranking(rows,w):
  # Compute comparison ranges once per course / vehicle / trip.

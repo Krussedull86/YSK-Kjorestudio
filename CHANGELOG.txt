@@ -1,6 +1,7 @@
 1.3.1 · bygg 5 · DEV TEST · 2026-10-07
 Testutgave for å kontrollere oppdatering fra APK bygg 4 til bygg 5 og Windows EXE.
 GitHub-prosjektet er etablert som privat repo.
+Rettet åpne SQLite-forbindelser som låste filer på Windows.
 
 1.3.0 · bygg 4 · 2026-10-07
 Lys og interaktiv klasseromsvisning i helskjerm, også på skjerm 2.

@@ -8,6 +8,16 @@ class Tests(unittest.TestCase):
  def tearDown(self):self.tmp.cleanup()
  def data(self,**kwargs):
   return dict(driver='Kjell',course='YSK',vehicle='C',trip=1,minutes=60,km=40,liters=12,stops=2,**{k:'Bra' for k in QUAL})|kwargs
+ def test_connection_closes(self):
+  import sqlite3
+  with self.store.conn() as c:c.execute('SELECT 1')
+  with self.assertRaises(sqlite3.ProgrammingError):c.execute('SELECT 1')
+ def test_connection_rolls_back(self):
+  with self.assertRaises(RuntimeError):
+   with self.store.conn() as c:
+    c.execute('INSERT INTO settings VALUES (999,?)',('{}',))
+    raise RuntimeError('abort transaction')
+  with self.store.conn() as c:self.assertIsNone(c.execute('SELECT id FROM settings WHERE id=999').fetchone())
  def test_metrics(self):
   m=metrics(self.store.save(self.data()));self.assertEqual(m['fart'],40);self.assertAlmostEqual(m['forbruk'],.3)
  def test_duplicate_and_edit(self):
