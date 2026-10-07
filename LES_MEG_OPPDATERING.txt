@@ -1,6 +1,7 @@
-Versjon 1.3.1 bygg 5 · dev-test · 7. oktober 2026
-Windows EXE er bygget i GitHub, med 35 beståtte tester på Windows.
-Android APK er bygget lokalt og signert med eksisterende nøkkel.
-Begge filer kan installeres manuelt. Ingen oppdateringskanal er publisert ennå.
-API, brukerkanaler og GitHub OIDC-publisher er aktive i Supabase.
-GitHub-signering og publiseringsflagget gjenstår; stable er urørt.
+Versjon 1.3.2 bygg 6 · dev-test · 7. oktober 2026
+APK og EXE er bygget i GitHub og publisert automatisk til dev.
+Android har samme app-ID og signeringssertifikat som tidligere.
+Din konto står på dev. Åpne appens Innstillinger og sjekk oppdateringer.
+Godkjenn Android-installasjonen for å installere bygg 6.
+Windows: 35 tester bestått. SHA-256 kontrollert for begge releasefiler.
+Stable er ikke publisert eller endret.

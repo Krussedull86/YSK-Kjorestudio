@@ -2,7 +2,7 @@
 
 Lokal klasseromsvisning på Windows og Android-registrering ute i bilen. Supabase samler turer fra lærere med egne kontoer.
 
-Versjon **1.3.1 / bygg 5** har hvit klasseromsvisning, elleve statistikkvalg, elevgrafer, tur 1–5 og dev/stable per bruker. Fullskjerm velges på skjerm 1 eller 2. Rangering sammenligner samme kurs, bil og turnummer.
+Versjon **1.3.2 / bygg 6** har hvit klasseromsvisning, elleve statistikkvalg, elevgrafer, tur 1–5 og dev/stable per bruker. Fullskjerm velges på skjerm 1 eller 2. Rangering sammenligner samme kurs, bil og turnummer.
 
 ## Bruk
 
@@ -12,7 +12,8 @@ Installer APK over eksisterende app. Kjør den separate `YSK_Kjorestudio.exe` p�
 
 `.github/workflows/dev.yml` er klargjort for Windows- og Android-bygg, tester og dev-publisering. Admin velger testere i brukerlisten. Stable fremmes uttrykkelig i den innloggede portalen med samme releasefiler. Android krever bekreftelse på installasjon.
 
-Privat GitHub-repo er opprettet. Windows CI bygger EXE og alle 35 tester består. Android 1.3.1 bygg 5 er bygget lokalt med eksisterende signatur. OIDC-publisher er aktivert; private signeringssecrets og publiseringsflagget gjenstår i GitHub. Portalen er ikke hostet. Ingen utgave er publisert til oppdateringskanalene ennå. Supabase-API og medlemskanaler er aktivert; stable er urørt.
+GitHub-repoet er offentlig. GitHub Actions bygger og signerer APK og EXE automatisk ved push til dev. Android-nøkkelen og passordene er krypterte Actions-secrets. Versjon 1.3.2 bygg 6 er publisert til Supabase dev-kanalen og kontrollert med SHA-256. Alle 35 tester består på Windows. Stable er urørt. Portalen er ikke hostet ennå.
+
 
 ## Utvikling
 

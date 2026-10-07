@@ -1,4 +1,4 @@
-YSK KJØRESTUDIO · 1.3.1 · BYGG 5 · 7. OKTOBER 2026
+YSK KJØRESTUDIO · 1.3.2 · BYGG 6 · 7. OKTOBER 2026
 
 KOM I GANG
 Installer den separate Android APK-filen over den gamle appen. Den bruker
@@ -10,8 +10,8 @@ Kjør den separate YSK_Kjorestudio.exe på Windows. Python trengs ikke.
 Legg EXE i en egen skrivbar mappe. Kildepakken kan kjøres med Start.bat
 eller bygges med Bygg_EXE.bat hvis du ønsker å utvikle selv.
 Windows CI har bygget EXE og alle 35 tester består på Windows.
-Android APK er bygg 5 med samme app-ID og signatur som bygg 4.
-Automatisk dev-publisering er ennå ikke aktivert i GitHub.
+Android APK er bygg 6 med samme app-ID og signatur som bygg 4.
+Automatisk dev-publisering er aktivert i GitHub.
 
 TELEFON OG SKY
 Skolens Supabase-prosjekt og publishable key er forhåndsutfylt i Android.
@@ -68,7 +68,7 @@ Python-kjøring kan laste ned EXE, men bytter ikke ut Python-koden automatisk.
 Filer sjekkes med størrelse og SHA-256. APK sjekkes mot app-ID, bygg og signatur.
 
 Oppdaterings-API, brukerkanaler og innlogget portal er implementert.
-Ingen releasefiler er publisert i Supabase-kanalene ennå. Stable er urørt.
+Versjon 1.3.2 bygg 6 er publisert til dev-kanalen. Stable er urørt.
 GitHub Actions og portalhosting er klargjort i koden, men ikke aktivert.
 Les release_portal/OPPSETT.txt for de konkrete gjenværende oppsettstrinnene.
 

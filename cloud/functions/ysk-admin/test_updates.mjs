@@ -17,4 +17,5 @@ r=await scenario({action:'release_promote',release_id:'release-A'});assert.equal
 r=await scenario({action:'release_promote',release_id:'release-A',confirm:'stable'},{ready:false});assert.equal(r.result.status,400);
 r=await scenario({action:'release_promote',release_id:'release-A',confirm:'stable'});rpc=r.calls.find(c=>c.path.includes('/rpc/'));assert.equal(rpc.payload.p_channel,'stable');assert.equal(rpc.payload.p_release,'release-A');assert(!r.calls.some(c=>c.payload?.assets));
 r=await scenario({action:'release_commit',release_id:'release-A'},{ready:false});assert.equal(r.result.status,409);assert(!r.calls.some(c=>c.path.includes('/rpc/')));
+r=await scenario({action:'release_prepare',version:'1.3.2',build:6,assets:{android:{size:50000001,sha256:'a'.repeat(64)}}});assert.equal(r.result.status,400);assert.equal(r.calls.length,0);
 console.log('Update authorization, channel isolation, stale release, immutable promotion and bad hash scenarios passed.');

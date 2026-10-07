@@ -29,13 +29,13 @@ export async function updateAction(body,member,server,base,secret){
   if(!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)||!Number.isInteger(build)||build<1||notes.length>5000)return {status:400,data:{message:'Kontroller versjon, byggnummer og endringslogg.'}};
   const id=crypto.randomUUID();
   for(const [platform,meta] of Object.entries(body.assets||{})){
-   if(!platformOK(platform)||!/^[0-9a-f]{64}$/.test(meta.sha256)||!Number.isInteger(meta.size)||meta.size<1||meta.size>100*1024*1024)return {status:400,data:{message:'Ugyldig releasefil eller kontrollsum.'}};
+   if(!platformOK(platform)||!/^[0-9a-f]{64}$/.test(meta.sha256)||!Number.isInteger(meta.size)||meta.size<1||meta.size>50000000)return {status:400,data:{message:'Ugyldig releasefil eller kontrollsum.'}};
    const suffix=platform==='android'?'.apk':'.exe',name='YSK_Kjorestudio_'+platform+'_'+version+'_B'+build+'_'+new Date().toISOString().slice(0,10)+suffix;assets[platform]={name,size:meta.size,sha256:meta.sha256,path:member.organization_id+'/'+id+'/'+name};
   }
   if(!Object.keys(assets).length)return {status:400,data:{message:'Velg minst én releasefil.'}};
   const latest=await server('/rest/v1/ysk_releases?organization_id=eq.'+org+'&order=build.desc&limit=1&select=build');
   if(latest.length&&latest[0].build>=build)return {status:409,data:{message:'Byggnummeret må være høyere enn tidligere utgaver.'}};
-  try{await server('/storage/v1/bucket','POST',{id:BUCKET,name:BUCKET,public:false,file_size_limit:104857600});}catch{const bucket=await server('/storage/v1/bucket/'+BUCKET);if(bucket.public)throw new Error('Oppdateringslageret må være privat.');}
+  try{await server('/storage/v1/bucket','POST',{id:BUCKET,name:BUCKET,public:false,file_size_limit:50000000});}catch{const bucket=await server('/storage/v1/bucket/'+BUCKET);if(bucket.public)throw new Error('Oppdateringslageret må være privat.');}
   await server('/rest/v1/ysk_releases','POST',{id,organization_id:member.organization_id,version,build,notes,assets});const uploads={};
   for(const [platform,asset] of Object.entries(assets)){
    const result=await server('/storage/v1/object/upload/sign/'+BUCKET+'/'+asset.path,'POST',{});const relative=result.url;uploads[platform]={url:relative.startsWith('http')?relative:base+'/storage/v1'+relative,name:asset.name};
