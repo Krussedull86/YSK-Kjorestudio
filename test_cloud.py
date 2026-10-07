@@ -46,4 +46,21 @@ class CloudTests(unittest.TestCase):
   self.assertEqual(n,500);self.assertFalse(errors);self.assertTrue(connected);self.assertIn('updated_at=gte.',calls[0]);self.assertIn('or=',calls[1]);self.assertNotIn('offset=',calls[1]);self.assertEqual(saved[-1]['cursor'],'2026-10-07T11:00:00+00:00')
  def test_duplicate_other_id(self):
   self.store.save(self.d|{'id':str(uuid.uuid4())});n,errors=self.receiver.import_rows([self.row()]);self.assertEqual(n,0);self.assertTrue(errors)
+ def test_delete_retry_and_restore(self):
+  self.receiver.import_rows([self.row()]);deleted=self.row()|{'deleted_at':'2026-10-07','revision':'delete-version'}
+  self.assertEqual(self.receiver.import_rows([deleted]),(1,[]));self.assertEqual(self.store.all(),[])
+  self.assertEqual(self.receiver.import_rows([deleted]),(0,[]));self.assertEqual(self.receiver.remote(self.id)['revision'],'delete-version')
+  self.assertEqual(self.receiver.import_rows([self.row()|{'deleted_at':None,'revision':'restore-version'}]),(1,[]));self.assertEqual(len(self.store.all()),1)
+ def test_delete_preserves_unsent_local_edit(self):
+  self.receiver.import_rows([self.row()]);self.store.save(self.d|{'liters':7})
+  self.receiver.import_rows([self.row()|{'deleted_at':'today'}]);self.assertEqual(self.store.all(),[])
+  with self.store.conn() as c:
+   import json
+   saved=json.loads(c.execute('SELECT payload FROM cloud_deleted_local WHERE id=?',(self.id,)).fetchone()[0])
+  self.assertEqual(saved['liters'],7)
+ def test_save_uses_expected_version_and_imports_server_response(self):
+  response={'row':self.row()|{'revision':'new','deleted_at':None},'message':'Lagret'}
+  with patch.object(self.receiver,'admin',return_value=response) as call:
+   self.receiver.save_trip(self.d,'old');self.assertEqual(call.call_args.kwargs['expected_revision'],'old')
+  self.assertEqual(self.receiver.remote(self.id)['revision'],'new');self.assertEqual(len(self.store.all()),1)
 if __name__=='__main__':unittest.main()

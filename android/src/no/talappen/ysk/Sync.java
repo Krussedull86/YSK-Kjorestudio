@@ -19,7 +19,7 @@ public class Sync {
   try{byte[] b=body.toString().getBytes("UTF-8");h.setFixedLengthStreamingMode(b.length);try(OutputStream out=h.getOutputStream()){out.write(b);}int status=h.getResponseCode();InputStream in=status>=400?h.getErrorStream():h.getInputStream();String text="";if(in!=null)try(BufferedReader r=new BufferedReader(new InputStreamReader(in,"UTF-8"))){StringBuilder s=new StringBuilder();String line;while((line=r.readLine())!=null)s.append(line);text=s.toString();}if(status>=400){String error="HTTP "+status,code="";try{JSONObject e=new JSONObject(text);error=e.optString("msg",e.optString("message",e.optString("error_description",error)));code=e.optString("code");}catch(Exception ignored){}throw new ApiFailure(status,error,code);}return text.isEmpty()?new JSONObject():new JSONObject(text);}finally{h.disconnect();}
  }
  static JSONArray choices(String url,String api,String token)throws Exception{
-  JSONArray all=new JSONArray();for(int offset=0;;offset+=500){HttpURLConnection h=(HttpURLConnection)new URL(url+"/rest/v1/ysk_trips?select=driver,course,vehicle&order=id&limit=500&offset="+offset).openConnection();h.setConnectTimeout(15000);h.setReadTimeout(20000);h.setRequestProperty("apikey",api);h.setRequestProperty("Authorization","Bearer "+token);try{if(h.getResponseCode()!=200)throw new Exception("Kunne ikke hente navn/biler/kurs: HTTP "+h.getResponseCode());StringBuilder text=new StringBuilder();try(BufferedReader reader=new BufferedReader(new InputStreamReader(h.getInputStream(),"UTF-8"))){String line;while((line=reader.readLine())!=null)text.append(line);}JSONArray page=new JSONArray(text.toString());for(int i=0;i<page.length();i++)all.put(page.getJSONObject(i));if(page.length()<500)return all;}finally{h.disconnect();}}
+  JSONArray all=new JSONArray();for(int offset=0;;offset+=500){HttpURLConnection h=(HttpURLConnection)new URL(url+"/rest/v1/ysk_trips?select=driver,course,vehicle&deleted_at=is.null&order=id&limit=500&offset="+offset).openConnection();h.setConnectTimeout(15000);h.setReadTimeout(20000);h.setRequestProperty("apikey",api);h.setRequestProperty("Authorization","Bearer "+token);try{if(h.getResponseCode()!=200)throw new Exception("Kunne ikke hente navn/biler/kurs: HTTP "+h.getResponseCode());StringBuilder text=new StringBuilder();try(BufferedReader reader=new BufferedReader(new InputStreamReader(h.getInputStream(),"UTF-8"))){String line;while((line=reader.readLine())!=null)text.append(line);}JSONArray page=new JSONArray(text.toString());for(int i=0;i<page.length();i++)all.put(page.getJSONObject(i));if(page.length()<500)return all;}finally{h.disconnect();}}
  }
  public static String endpoint(String u)throws Exception{URI x=new URI(u.trim());if(!"https".equals(x.getScheme())||x.getHost()==null||x.getUserInfo()!=null||x.getQuery()!=null||x.getFragment()!=null||!(x.getPath().isEmpty()||x.getPath().equals("/")))throw new Exception("Bruk prosjektets HTTPS-adresse, uten sti eller nøkkel.");return "https://"+x.getAuthority();}
  public static synchronized void login(Context c,String url,String api,String email,String password)throws Exception{
@@ -32,12 +32,29 @@ public class Sync {
   String raw=Secure.get(c);if(raw.isEmpty())throw new Exception("Koble til skykonto først.");JSONObject s=new JSONObject(raw);
   if(s.optLong("expires_at",0)<=System.currentTimeMillis()/1000+90){s=request(url+"/auth/v1/token?grant_type=refresh_token",api,null,new JSONObject().put("refresh_token",s.getString("refresh_token")));Secure.put(c,s.toString());}return s;
  }
+ static List<JSONObject> ownRows(String url,String api,String token,String owner)throws Exception{
+  List<JSONObject> all=new ArrayList<>();for(int offset=0;;offset+=500){JSONArray page=getRows(url+"/rest/v1/ysk_trips?select=id,payload,revision,deleted_at&owner_id=eq."+owner+"&order=id&limit=500&offset="+offset,api,token);for(int i=0;i<page.length();i++)all.add(page.getJSONObject(i));if(page.length()<500){Collections.sort(all,(a,b)->Boolean.compare(a.isNull("deleted_at"),b.isNull("deleted_at")));return all;}}
+ }
+ public static synchronized List<JSONObject> managedRows(Context c)throws Exception{
+  List<JSONObject> all=new ArrayList<>();for(int offset=0;;offset+=500){JSONArray rows=admin(c,new JSONObject().put("action","trip_list").put("offset",offset)).getJSONArray("rows");for(int i=0;i<rows.length();i++)all.add(rows.getJSONObject(i));if(rows.length()<500)return all;}
+ }
  public static synchronized String run(Context context)throws Exception{
   Context c=context.getApplicationContext();try(TripDb db=new TripDb(c)){
    List<JSONObject> rows=db.rows(true);
    SharedPreferences p=c.getSharedPreferences("cloud",0);String url=p.getString("url",""),api=p.getString("api","");if(url.isEmpty())return "Lagret på telefonen. Koble til sky under Innstillinger for å sende.";
    JSONObject s=session(c,url,api);JSONObject member=membership(url,api,s);String token=s.getString("access_token"),owner=s.getJSONObject("user").getString("id");db.bind(url+"|"+owner);int sent=0,failed=0;
-   for(JSONObject r:rows){if(Thread.currentThread().isInterrupted())throw new InterruptedException();JSONObject d=r.getJSONObject("payload");JSONObject body=new JSONObject().put("id",r.getString("id")).put("owner_id",owner).put("revision",r.getString("revision")).put("payload",d);for(String k:new String[]{"driver","course","vehicle"})body.put(k,d.getString(k));body.put("trip",d.getInt("trip"));if(member!=null)body.put("organization_id",member.getString("organization_id"));try{request(url+"/rest/v1/ysk_trips?on_conflict=id",api,token,body);db.mark(r.getString("id"),r.getString("revision"),"sent","");sent++;}catch(Exception e){db.mark(r.getString("id"),r.getString("revision"),"error",e.getMessage());failed++;}}
+   // Pull sent rows first, so upgraded databases acquire their cloud revision.
+   List<JSONObject> remoteRows=ownRows(url,api,token,owner);for(JSONObject r:remoteRows){try{db.remote(r,false);}catch(Exception ignored){}}
+   rows=db.rows(true);
+   for(JSONObject r:rows){if(Thread.currentThread().isInterrupted())throw new InterruptedException();if(!db.current(r.getString("id"),r.getString("revision")))continue;
+    JSONObject body=new JSONObject().put("action","trip_save").put("payload",r.getJSONObject("payload")).put("revision",r.getString("revision")).put("expected_revision",r.optString("cloud_revision"));
+    try{JSONObject result=request(url+"/functions/v1/ysk-admin",api,token,body);db.sent(r.getString("id"),r.getString("revision"),result.getJSONObject("row").getString("revision"));sent++;}
+    catch(Exception e){db.mark(r.getString("id"),r.getString("revision"),"error",e.getMessage());failed++;}}
+   for(JSONObject r:db.deletions()){
+    try{request(url+"/functions/v1/ysk-admin",api,token,new JSONObject().put("action","trip_delete").put("id",r.getString("id")).put("revision",r.getString("revision")).put("expected_revision",r.getString("expected_revision")));db.deleteDone(r.getString("id"),r.getString("revision"));}
+    catch(ApiFailure e){if(e.status==404)db.deleteDone(r.getString("id"),r.getString("revision"));else{db.deleteError(r.getString("id"),e.getMessage());failed++;}}
+    catch(Exception e){db.deleteError(r.getString("id"),e.getMessage());failed++;}}
+   for(JSONObject r:ownRows(url,api,token,owner)){try{db.remote(r,false);}catch(Exception e){failed++;}}
    try{c.getSharedPreferences("cloud",0).edit().putString("choices",choices(url,api,token).toString()).apply();}catch(Exception e){return sent+" turer sendt. Navn/biler/kurs kunne ikke oppdateres: "+e.getMessage();}
    return sent+" turer sendt. "+failed+" venter"+(failed>0?" – se feilen under Mine turer.":".");
   }

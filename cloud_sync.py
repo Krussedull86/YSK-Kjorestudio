@@ -1,4 +1,4 @@
-"""One-way cloud -> classroom PC sync. Local edits are protected from overwrite."""
+"""Cloud sync and authenticated trip management. Local edits are protected from overwrite."""
 import base64,ctypes,hashlib,json,os,queue,threading,time,urllib.request,urllib.error,urllib.parse
 from pathlib import Path
 from tkinter import ttk,messagebox
@@ -58,6 +58,8 @@ class Receiver:
    c.execute('CREATE TABLE IF NOT EXISTS cloud_seen (id TEXT PRIMARY KEY, remote_hash TEXT, local_hash TEXT)')
    c.execute('CREATE TABLE IF NOT EXISTS cloud_binding (id INTEGER PRIMARY KEY, account TEXT)')
    c.execute('CREATE TABLE IF NOT EXISTS cloud_conflicts (id TEXT PRIMARY KEY, message TEXT)')
+   c.execute('CREATE TABLE IF NOT EXISTS cloud_versions (id TEXT PRIMARY KEY, row TEXT)')
+   c.execute('CREATE TABLE IF NOT EXISTS cloud_deleted_local (id TEXT PRIMARY KEY, payload TEXT)')
  def load(self):
   if not self.path.exists():return None
   return json.loads(protect(self.path.read_text(),True))
@@ -106,9 +108,20 @@ class Receiver:
    except APIError as e:
     if e.status == 404:raise ValueError('Skole/admin er klargjort i pakken, men må aktiveres i Supabase før brukeradministrasjon virker.') from None
     raise
+ def remote(self,id):
+  with self.store.conn() as c:r=c.execute('SELECT row FROM cloud_versions WHERE id=?',(id,)).fetchone()
+  return json.loads(r[0]) if r else None
+ def trip_list(self):
+  rows=[]
+  for offset in range(0,100000000,500):
+   page=self.admin('trip_list',offset=offset)['rows'];rows.extend(page)
+   if len(page)<500:return rows
+ def save_trip(self,d,expected_revision=''):
+  result=self.admin('trip_save',payload=self.store.validate(d),expected_revision=expected_revision)
+  self.import_rows([result['row']],force=True);return result
  def import_rows(self,rows,force=False):
   imported=0;conflicts=[]
-  for remote in rows:
+  for remote in sorted(rows,key=lambda r:0 if r.get('deleted_at') else 1):
    d=remote['payload'];id=remote['id']
    if d.get('id')!=id:conflicts.append('Ugyldig ID fra sky');continue
    rh=fingerprint(d)
@@ -117,6 +130,12 @@ class Receiver:
     seen=c.execute('SELECT remote_hash,local_hash FROM cloud_seen WHERE id=?',(id,)).fetchone()
     record=c.execute('SELECT payload FROM trips WHERE id=?',(id,)).fetchone()
     local=json.loads(record[0]) if record else None
+    c.execute('INSERT OR REPLACE INTO cloud_versions VALUES(?,?)',(id,json.dumps(remote,ensure_ascii=False)))
+    if remote.get('deleted_at'):
+     if local:c.execute('INSERT OR REPLACE INTO cloud_deleted_local VALUES(?,?)',(id,json.dumps(local,ensure_ascii=False)))
+     c.execute('DELETE FROM trips WHERE id=?',(id,));c.execute('DELETE FROM cloud_conflicts WHERE id=?',(id,))
+     c.execute('INSERT OR REPLACE INTO cloud_seen VALUES(?,?,?)',(id,'deleted',rh))
+     imported+=int(local is not None);continue
     if seen and seen[0]==rh and not force:continue
     if not force and local and ((seen and fingerprint(local)!=seen[1]) or (not seen and fingerprint(local)!=rh)):
      message=f"{d.get('driver','?')} tur {d.get('trip','?')}: endret på PC; ikke overskrevet";conflicts.append(message);c.execute('INSERT OR REPLACE INTO cloud_conflicts VALUES(?,?)',(id,message));continue
@@ -135,9 +154,10 @@ class Receiver:
    if s.get('expires_at',0)<=time.time()+90:
     s=request(url+'/auth/v1/token?grant_type=refresh_token',api,body={'refresh_token':s['refresh_token']});cfg['session']=s;self.save(cfg)
    member=self.membership(cfg);legacy=url+'|'+s['user']['id'];self.bind(url+'|school:'+member['organization_id'] if member else legacy,legacy);allrows=[];last=None
+   with self.store.conn() as c:needs_full=bool(c.execute('SELECT 1 FROM cloud_seen WHERE id NOT IN (SELECT id FROM cloud_versions) LIMIT 1').fetchone())
    while True:
-    params={'select':'id,payload,updated_at','order':'updated_at.asc,id.asc','limit':'500'}
-    if not force and cfg.get('cursor'):params['updated_at']='gte.'+cfg['cursor']
+    params={'select':'id,payload,updated_at,revision,deleted_at,owner_id','order':'updated_at.asc,id.asc','limit':'500'}
+    if not force and not needs_full and cfg.get('cursor'):params['updated_at']='gte.'+cfg['cursor']
     if last:params['or']=f"(updated_at.gt.{last['updated_at']},and(updated_at.eq.{last['updated_at']},id.gt.{last['id']}))"
     rows=request(url+'/rest/v1/ysk_trips?'+urllib.parse.urlencode(params),api,s['access_token']);allrows.extend(rows)
     if len(rows)<500:break
@@ -151,7 +171,7 @@ class CloudPanel:
  def __init__(self,app,path):
   self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False
   f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Telefon / sky')
-  ttk.Label(f,text='Telefon → sky → klasserom',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
+  ttk.Label(f,text='Telefon ↔ sky ↔ klasserom',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
   ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk skolens Supabase-prosjekt og din egen brukerkonto. Etter skoleaktivering hentes turene fra alle skolens lærere.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
   self.fields={}
   for i,(k,label) in enumerate([('url','Supabase Project URL'),('api','Publishable / anon key'),('email','E-post'),('password','Passord')],start=2):
@@ -160,7 +180,7 @@ class CloudPanel:
   ttk.Button(f,text='Hent turer nå',command=self.sync).grid(row=7,column=1,sticky='w',pady=8)
   ttk.Button(f,text='Bruk telefonens versjoner ved konflikt',command=self.force).grid(row=7,column=0,sticky='w',pady=8)
   self.status=tk.StringVar(value='Ikke koblet til. Android-appen kan fortsatt lagre turer lokalt.');ttk.Label(f,textvariable=self.status,wraplength=850).grid(row=8,column=0,columnspan=2,sticky='w',pady=15)
-  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Lokale PC-endringer overskrives ikke.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nPC-endringer sendes ikke tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nOppsettsveiledning: cloud/OPPSETT.txt i pakken.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
+  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nOppsettsveiledning: cloud/OPPSETT.txt i pakken.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
   try:
    cfg=self.receiver.load()
    if cfg:

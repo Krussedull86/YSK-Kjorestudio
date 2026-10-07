@@ -1,0 +1,13 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('./trips.ts',import.meta.url),'utf8').replace('export async function','async function');
+const context={Number,encodeURIComponent};vm.createContext(context);vm.runInContext(source,context);
+const calls=[];const server=async(path,method,body)=>{calls.push({path,method,body});return path.includes('/rpc/')?{status:409,message:'Conflict'}:[];};
+const member={user_id:'verified-user',organization_id:'verified-school',role:'teacher'};
+let result=await context.tripAction({action:'catalog_delete',kind:'course'},member,server);assert.equal(result.status,403);assert.equal(calls.length,0);
+result=await context.tripAction({action:'trip_list',organization_id:'attacker',user_id:'attacker'},member,server);
+assert(calls[0].path.includes('organization_id=eq.verified-school'));assert(calls[0].path.includes('owner_id=eq.verified-user'));assert(!calls[0].path.includes('attacker'));
+result=await context.tripAction({action:'trip_save',p_user:'attacker',payload:{id:'test'}},member,server);assert.equal(result.status,409);assert.equal(calls[1].body.p_user,'verified-user');
+calls.length=0;await context.tripAction({action:'trip_list'}, {...member,role:'admin'},server);assert(!calls[0].path.includes('owner_id=eq.'));
+result=await context.tripAction({action:'trip_list',offset:-1},member,server);assert.equal(result.status,400);
+assert.equal(await context.tripAction({action:'me'},member,server),null);
+console.log('Trip permissions, verified identity, school isolation, paging and conflict response passed.');

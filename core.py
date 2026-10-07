@@ -22,7 +22,7 @@ class Store:
   w={k:float(w[k]) for k in WEIGHTS}
   if any(not math.isfinite(v) or v<0 for v in w.values()) or sum(w.values())<=0: raise ValueError('Vektene må være positive eller null, og summen større enn null.')
   with self.conn() as c:c.execute('INSERT OR REPLACE INTO settings VALUES (1,?)',(json.dumps(w),))
- def save(self,d,connection=None):
+ def validate(self,d):
   d=dict(d)
   for k in ['driver','course','vehicle']:
    d[k]=str(d.get(k,'')).strip()
@@ -56,6 +56,9 @@ class Store:
   d['notes']=str(d.get('notes',''))[:2000]
   d['updated']=datetime.datetime.now().isoformat(timespec='seconds')
   d['id']=str(d.get('id') or uuid.uuid4())
+  return d
+ def save(self,d,connection=None):
+  d=self.validate(d)
   with (self.conn() if connection is None else contextlib.nullcontext(connection)) as c:
    old=c.execute('SELECT id FROM trips WHERE driver=? AND course=? AND vehicle=? AND trip=?',(d['driver'],d['course'],d['vehicle'],d['trip'])).fetchone()
    if old and old[0]!=d['id']:raise ValueError('Denne turen finnes allerede. Åpne den for å endre.')

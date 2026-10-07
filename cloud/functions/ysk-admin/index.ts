@@ -1,4 +1,5 @@
 import { updateAction } from './updates.ts';
+import { tripAction } from './trips.ts';
 // Server-side only. Project service key stays in Edge Function environment.
 const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'authorization,apikey,content-type', 'Access-Control-Allow-Methods':'POST,OPTIONS' };
 const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
@@ -24,6 +25,7 @@ Deno.serve(async (req) => {
   const raw = await req.text(); if (raw.length > 12000) return reply({ message: 'For stor forespørsel.' }, 413);
   const body = JSON.parse(raw || '{}');
   if (body.action === 'me') return reply({ member });
+  const tripResult=await tripAction(body,member,server);if(tripResult)return reply(tripResult.data,tripResult.status||200);
   const update=await updateAction(body,member,server,base,secret);if(update)return reply(update.data,update.status||200);
   if (member.role !== 'admin') return reply({ message: 'Bare administrator kan administrere brukere.' }, 403);
   const org = encodeURIComponent(member.organization_id);

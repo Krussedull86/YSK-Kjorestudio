@@ -1,5 +1,6 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
-const source=fs.readFileSync(new URL('./updates.ts',import.meta.url),'utf8').replace('export async function','async function')+'\n'+fs.readFileSync(new URL('./index.ts',import.meta.url),'utf8').replace(/^import .*updates.ts.*$/m,'');
+const trips=fs.readFileSync(new URL('./trips.ts',import.meta.url),'utf8').replace('export async function','async function');
+const source=trips+'\n'+fs.readFileSync(new URL('./updates.ts',import.meta.url),'utf8').replace('export async function','async function')+'\n'+fs.readFileSync(new URL('./index.ts',import.meta.url),'utf8').replace(/^import .*$/gm,'');
 async function scenario({role='admin',active=true,valid=true,target=true,insertFails=false,created=true},body){
  let handler;const calls=[];
  const fetch=async(url,options={})=>{calls.push({url,options});let payload,status=200;

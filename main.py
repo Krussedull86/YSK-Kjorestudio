@@ -113,23 +113,37 @@ class App:
   sy=ttk.Scrollbar(box,orient='vertical',command=t.yview);sx=ttk.Scrollbar(box,orient='horizontal',command=t.xview);t.configure(yscrollcommand=sy.set,xscrollcommand=sx.set)
   t.grid(row=0,column=0,sticky='nsew');sy.grid(row=0,column=1,sticky='ns');sx.grid(row=1,column=0,sticky='ew');box.rowconfigure(0,weight=1);box.columnconfigure(0,weight=1);return t
  def reset(self):
-  self.edit_id=None;self.editlabel.set('Ny tur')
+  self.edit_id=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
    if k not in ['course','vehicle']:v.set('Middel' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
  def save(self):
   try:
-   d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id;self.store.save(d);self.reset();self.refresh();messagebox.showinfo('Lagret','Turen er lagret.')
+   d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id
+   if hasattr(self,'management') and self.cloud_panel.receiver.load():
+    self.management.save(d,getattr(self,'edit_revision',''));return
+   self.store.save(d);self.reset();self.refresh();messagebox.showinfo('Lagret','Turen er lagret lokalt på PC.')
   except Exception as e:messagebox.showerror('Kunne ikke lagre',str(e))
  def edit(self):
   ids=self.table.selection()
   if not ids:return
-  d=next(d for d in self.store.all() if d['id']==ids[0]);self.edit_id=d['id']
+  self.open_trip(next(d for d in self.store.all() if d['id']==ids[0]))
+ def open_trip(self,d):
+  self.edit_id=d['id'];self.edit_revision=''
+  if hasattr(self,'cloud_panel'):
+   remote=self.cloud_panel.receiver.remote(d['id']);self.edit_revision=remote.get('revision','') if remote else ''
   for k,v in self.fields.items():v.set(d.get(k,''))
   self.editlabel.set('Redigerer eksisterende tur');self.nb.select(self.register_frame)
  def delete(self):
   ids=self.table.selection()
-  if ids and messagebox.askyesno('Slett tur','Slette den valgte turen?'):
-   self.store.delete(ids[0]);self.refresh()
+  if not ids:return
+  if hasattr(self,'management'):
+   remote=self.cloud_panel.receiver.remote(ids[0])
+   if remote:
+    if messagebox.askyesno('Slett tur','Flytte den valgte turen til papirkurven i skyen?'):
+     self.management.action('trip_delete',id=ids[0],expected_revision=remote['revision'])
+    return
+  if messagebox.askyesno('Slett lokal tur','Slette den lokale turen? En sikkerhetskopi tas først.'):
+   self.store.backup(DATA/('før_sletting_'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'.db'));self.store.delete(ids[0]);self.refresh()
  def filtered(self,rows):return [d for d in rows if all(v.get()=='Alle' or str(d[k])==v.get() for k,(v,box) in self.filters.items())]
  def refresh(self):
   rows=self.store.all();self.rows=rows
@@ -215,6 +229,8 @@ if __name__=='__main__':
  if '--demo' not in sys.argv:
   from cloud_sync import CloudPanel
   app.cloud_panel=CloudPanel(app,DATA/'cloud_session.dpapi')
+  from management import ManagementPanel
+  app.management=ManagementPanel(app,app.cloud_panel.receiver)
   from admin_panel import AdminPanel
   app.admin_panel=AdminPanel(app,app.cloud_panel.receiver)
   from updates import UpdatesPanel

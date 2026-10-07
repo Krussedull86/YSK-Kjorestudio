@@ -1,0 +1,24 @@
+YSK KJØRESTUDIO 1.4.0 · BYGG 7
+
+Oppdater både APK og PC-programmet via Sjekk oppdateringer (dev).
+
+TELEFON
+Mine turer: Rediger tur / Slett tur. Egne turer kan redigeres og slettes uten nett; endringene sendes senere.
+Mine turer → Administrer turer, kurs og biler: velg Turer, Kurs, Biler eller Papirkurv. Denne administrasjonen krever nett.
+
+PC
+Turer, kurs og biler → Hent fra sky → velg type og rad → Rediger valgt / Slett valgt.
+Redigering åpner hele turskjemaet. Lagre sender endringen til skyen.
+Papirkurv → velg tur → Gjenopprett.
+
+RETTIGHETER
+Lærer: egne turer. Admin: alle skolens turer samt navn og sletting av kurs/biler.
+Navneendringer gjelder alle aktive tilhørende turer.
+Sletting av et kurs/en bil flytter tilhørende turer til papirkurven. Antallet vises før bekreftelse.
+Gjenopprett turene enkeltvis. Kurs-/bilnavnene dukker da opp i listene igjen.
+
+SYNKRONISERING
+PC henter automatisk hvert 10. sekund. Åpen telefonapp synkroniserer hvert 30. sekund og ved manuell synkronisering.
+Gamle utkast kan ikke overskrive en nyere skyversjon. Feil vises under Mine turer.
+Hent skyversjon erstatter det lokale utkastet etter bekreftelse. Avbryt ventende sletting hvis en sletting får versjonskonflikt.
+Lokale PC-turer uten skyinnlogging lagres på PC; lokale slettinger tar først sikkerhetskopi.

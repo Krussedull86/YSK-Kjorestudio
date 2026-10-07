@@ -36,6 +36,12 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
+      - name: Test cloud permissions
+        run: |
+          node cloud/functions/ysk-admin/test.mjs
+          node cloud/functions/ysk-admin/test_updates.mjs
+          node cloud/functions/ysk-admin/test_trips.mjs
+          node cloud/functions/ysk-publish/test.mjs
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Restore private signing key
         env:
