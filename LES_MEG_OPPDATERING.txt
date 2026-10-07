@@ -1,3 +1,6 @@
-Se LES_MEG.txt og release_portal/OPPSETT.txt.
-Versjon 1.3.0 bygg 4 har klientkode for oppdateringssjekk og dev/stable.
-API og brukerkanaler er aktivert i Supabase. Releasefiler og GitHub-pipeline er ikke publisert/aktivert ennå.
+Versjon 1.3.1 bygg 5 · dev-test · 7. oktober 2026
+Windows EXE er bygget i GitHub, med 35 beståtte tester på Windows.
+Android APK er bygget lokalt og signert med eksisterende nøkkel.
+Begge filer kan installeres manuelt. Ingen oppdateringskanal er publisert ennå.
+API, brukerkanaler og GitHub OIDC-publisher er aktive i Supabase.
+GitHub-signering og publiseringsflagget gjenstår; stable er urørt.
