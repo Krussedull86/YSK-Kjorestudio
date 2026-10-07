@@ -1,0 +1,49 @@
+YSK OPPDATERINGSPORTAL · 1.3.0
+
+FERDIG OG AKTIVERT
+Supabase-tabeller for medlemskanaler, utgaver og dev/stable-pekere.
+ysk-admin verifiserer innlogging og aktivt skolemedlemskap ved hvert kall.
+Admin kan sette kanal, laste opp private filer, publisere dev og fremme stable.
+Lærere får bare oppdateringen valgt av deres egen medlemskanal.
+Databasen hindrer samtidig publisering i å flytte en kanal til et eldre bygg.
+Stable har ikke blitt endret eller publisert i denne samtalen.
+
+PORTAL
+index.html er en lys, innlogget portal som bruker samme skolekonto som appen.
+Publiser via GitHub Pages eller start fra prosjektmappen:
+  python -m http.server 8787
+Åpne http://localhost:8787/release_portal/ .
+Logg inn, velg brukernes kanaler, fyll versjon, byggnummer, endringer og filer.
+Filer lastes opp til privat Supabase Storage med signerte opplastingsadresser.
+Serveren kontrollerer størrelse og SHA-256 før den endrer dev-pekeren.
+Et utkast kan fullføres etter et avbrudd hvis alle filene allerede er lastet opp.
+Hvis opplastingen avbrøt før alle filene kom frem, bruk nytt byggnummer eller
+be administrator rydde utkastet; automatiske klienter tilbys ikke uferdige filer.
+Fremming til stable bruker nøyaktig samme release-ID og filer, uten ny bygging.
+
+GITHUB – GJENSTÅR
+1. Opprett det avtalte repoet Krussedull86/YSK-Kjorestudio.
+2. Last opp kode med .gitignore; ikke signing, APK/EXE, databaser eller økter.
+3. Opprett main og dev. main inneholder portalhosting; dev bygger programmer.
+4. Sett Pages til GitHub Actions. .github/workflows/portal.yml publiserer portalen.
+5. Legg inn private GitHub Actions-secrets fra eierens signing-mappe:
+   YSK_ANDROID_KEYSTORE_BASE64 (base64 av ysk-release.p12)
+   YSK_ANDROID_STORE_PASSWORD
+   YSK_ANDROID_KEY_PASSWORD
+6. Fyll det faktiske repoets numeriske ID i cloud/functions/ysk-publish/index.ts.
+   Publiser ysk-publish først etter at repo-ID og opphav er kontrollert.
+   Funksjonen bruker verifisert GitHub OIDC, ikke passord/service key i GitHub.
+   Bare nøyaktig repo, eier-ID, dev-gren og dev.yml får publisere dev.
+   OIDC-subjektet bruker ny immutable ID-form fra GitHubs gjeldende dokumentasjon.
+   Den funksjonen er foreløpig ikke deployet. verify_jwt=false brukes ved deploy
+   fordi funksjonen selv verifiserer GitHubs JWT-signatur, utsteder og påstander;
+   Supabase-gatewayens vanlige brukertokens er ikke GitHub OIDC-tokens.
+7. Push til dev bygger Windows EXE og Android APK, tester og publiserer begge
+   med private oppdateringsfiler til skolens dev-kanal. Stable kan ikke endres
+   av CI-funksjonen. Alle nye versjoner må ha høyere byggnummer.
+8. Etter testing: admin velger utgaven i portalen og bekrefter stable, eller
+   brukeren ber Codex uttrykkelig fremme den testede utgaven.
+
+Tilstanden nå: Nytt repo, Pages, signerings-secrets, OIDC-publisher og første
+GitHub-bygg gjenstår. Dermed finnes ikke automatisk GitHub-push eller ferdig
+Windows-EXE fra denne byggingen ennå. Første APK er vedlagt separat.

@@ -1,0 +1,13 @@
+1.3.1 · bygg 5 · DEV TEST · 2026-10-07
+Testutgave for å kontrollere oppdatering fra APK bygg 4 til bygg 5 og Windows EXE.
+GitHub-prosjektet er etablert som privat repo.
+
+1.3.0 · bygg 4 · 2026-10-07
+Lys og interaktiv klasseromsvisning i helskjerm, også på skjerm 2.
+Elleve visninger: samlet poeng, forbedring, forbruk, tid/km, stopp/km, trafikksikkerhet, fartsavpassing, fartsøkning, komfort, vurderinger og siste turer.
+Velg kurs, bil, tur og turen forbedringen skal sammenlignes med.
+Klikk på eleven for graf, turdetaljer, vurderinger og lærer. Alle elever vises over flere sider.
+Administrator kan velge dev/stable for hver bruker i APK, PC og oppdateringsportal.
+Android og PC sjekker automatisk etter nye versjoner; installasjon startes av brukeren.
+Filer kontrolleres med størrelse og SHA-256. Android kontrollerer også app-ID og signatur.
+Portal for publisering til dev og eksplisitt flytting av samme filer til stable.

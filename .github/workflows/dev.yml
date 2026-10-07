@@ -1,0 +1,74 @@
+name: YSK dev
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ysk-dev
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -v
+      - run: python -m pip install pyinstaller==6.16.0
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name YSK_Kjorestudio --add-data "mobile.html;." main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/YSK_Kjorestudio.exe
+          if-no-files-found: error
+  android:
+    if: ${{ vars.YSK_RELEASE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Restore private signing key
+        env:
+          KEYSTORE: ${{ secrets.YSK_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.YSK_ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.YSK_ANDROID_KEY_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import base64,os,pathlib
+          p=pathlib.Path('android/signing');p.mkdir(parents=True,exist_ok=True)
+          for key in ['KEYSTORE','STORE_PASSWORD','KEY_PASSWORD']:
+              if not os.environ.get(key):raise SystemExit('Missing Android signing secret: '+key)
+          (p/'ysk-release.p12').write_bytes(base64.b64decode(os.environ['KEYSTORE']))
+          (p/'password.txt').write_text(os.environ['STORE_PASSWORD'])
+          (p/'key_password.txt').write_text(os.environ['KEY_PASSWORD'])
+          PY
+      - run: python android/build_android.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: android/YSK_Kjorestudio_Android.apk
+          if-no-files-found: error
+  publish-dev:
+    if: ${{ vars.YSK_RELEASE_ENABLED == 'true' }}
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          path: release_output
+      - run: python scripts/publish_dev.py

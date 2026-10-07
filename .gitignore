@@ -1,0 +1,16 @@
+android/signing/
+.build_env/
+__pycache__/
+*.db
+*.db-wal
+*.db-shm
+*.dpapi
+.env*
+release_output/
+
+android/build/
+dist/
+build/
+*.apk
+*.exe
+*.spec

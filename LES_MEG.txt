@@ -1,0 +1,89 @@
+YSK KJØRESTUDIO · 1.3.0 · BYGG 4 · 7. OKTOBER 2026
+
+KOM I GANG
+Installer den separate Android APK-filen over den gamle appen. Den bruker
+samme app-ID og signatur; registrerte turer og konto beholdes.
+Denne første oppdateringen må installeres manuelt fordi den gamle appen
+ikke har oppdateringssjekk. Senere versjoner kan hentes fra appen.
+
+Pakk ut ZIP-filen på PC. Start.bat kjører programmet med Python 3.12+.
+Finn_Python.bat søker både etter py, python og vanlig Python-installasjon.
+Bygg_EXE.bat lager dist\YSK_Kjorestudio.exe på Windows. Etter bygging kreves
+ikke Python for å kjøre EXE. En ferdig Windows-EXE er ikke med i denne pakken:
+GitHub-byggingen venter på opprettelse og konfigurering av det nye repoet.
+
+TELEFON OG SKY
+Skolens Supabase-prosjekt og publishable key er forhåndsutfylt i Android.
+Logg inn med din egen konto. Du som admin bruker din eksisterende skykonto.
+Lagre turer også uten nett. Appen sender ventende turer når den har forbindelse.
+PC: Logg inn under Telefon / sky. Automatisk henting er på; normalt hvert
+10. sekund mens programmet kjører. Hele skolens turer vises på PC.
+Ny tur på samme elev/kurs/bil/turnummer må redigeres fremfor dobbeltregistreres.
+Navn, kurs og biler foreslås fra lokale og synkroniserte registreringer.
+
+LYS KLASSEROMSVISNING
+Velg skjermnummer øverst på PC og åpne storskjerm. Den fyller skjermen.
+Windows kan rapportere skjermnumrene annerledes enn i skjerminnstillingene.
+Esc lukker visningen; F11 fyller valgt skjerm på nytt.
+
+Velg mellom samlet poeng, forbedring, forbruk, tid per km, stopp per km,
+trafikksikkerhet, fartsavpassing, fartsøkning, komfort, vurderinger og siste turer. Filtrer kurs, bil og tur direkte
+på storskjermen. Sammenlign forbedringen fra første registrerte eller valgt tur.
+Klikk på eleven, så på tur 1–5 for detaljer, forbrukskurve og vurderinger.
+Visningen viser inntil åtte elever per side. Piltastene eller knappene
+bytter side. Mellomrom starter/pauser automatisk visning (18 sekunder).
+Alle elever er med; automatikk går gjennom alle sidene og de ulike visningene.
+Klikk på en elev stopper automatikk slik at klassen kan diskutere resultatet.
+Nye eller endrede turer markeres kort i grønt.
+Demo: Start_Demo.bat bruker egen database med åtte elever og fem turer hver.
+
+RANGERING OG FORBEDRING
+Plass sammenlignes innen samme kurs, kjøretøygruppe og turnummer.
+Vær, last og rute må være sammenlignbare. Fart gir ingen poeng.
+Tid, forbruk og stopp normaliseres per km; lavere verdi rangeres først.
+Bra=100, Middels=50, Svak=0. Samlet poeng bruker vektene i programmet.
+Positiv forbedring betyr redusert forbruk per 10 km fra valgt utgangstur.
+Mangler utgangsturen eller er forbruket der null, vises ingen prosent/plass.
+Poeng er et verktøy for undervisning, ikke automatisk faglig godkjenning.
+Grafen viser alle registrerte turer for valgt elev. Snitt og plass gjelder
+visningen og filtrene som er valgt. Vurderinger er snittet av de fire feltene.
+
+FLERE LÆRERE OG ADMIN
+Hver lærer har egen innlogging. Alle aktive lærere i skolen kan lese skolens
+turer. Lærere kan bare sende/redigere turer som tilhører deres egen konto.
+Opprett konto i Admin / lærere på PC eller via Innstillinger > Admin på APK.
+Opprettelse sender ingen e-post. Gi læreren startpassordet utenfor appen.
+Nye brukere starter i stable. Admin kan velge dev/stable for hver bruker.
+Bare lærerkontoer kan deaktiveres i denne brukerlisten.
+
+OPPDATERINGER
+APK og PC sjekker sin brukers kanal automatisk mens app/program er åpent.
+Det er også en knapp for manuell sjekk. Administrator kan velge testere.
+Installasjon skjer når brukeren velger den; den avbryter ikke en kjøretur/time.
+Android ber om tillatelse for installasjon fra YSK og om bekreftelse.
+PC i EXE-modus laster ned, sikkerhetskopierer databasen ved avslutning,
+beholder forrige EXE og starter på nytt. Installer fra en skrivbar mappe.
+Python-kjøring kan laste ned EXE, men bytter ikke ut Python-koden automatisk.
+Filer sjekkes med størrelse og SHA-256. APK sjekkes mot app-ID, bygg og signatur.
+
+Oppdaterings-API, brukerkanaler og innlogget portal er implementert.
+Ingen releasefiler er publisert i Supabase-kanalene ennå. Stable er urørt.
+GitHub Actions og portalhosting er klargjort i koden, men ikke aktivert.
+Les release_portal/OPPSETT.txt for de konkrete gjenværende oppsettstrinnene.
+
+DATA OG SIKKERHETSKOPI
+PC-data ligger i %LOCALAPPDATA%\YSK_Kjorestudio\ysk.db utenfor programmet.
+Sikkerhetskopi og CSV-knapper finnes øverst. Automatisk databasekopi ved normal
+avslutning. Ikke bytt database mens programmet kjører. Arkiver gamle data før
+restaurering. Android lagrer telefonens turer lokalt også uten forbindelse.
+Innlogging lagres kryptert. Publishable key gir ikke administratorrettigheter.
+android/signing inneholder eierens private APK-nøkkel: oppbevar den privat.
+Ikke last hele ZIP-pakken med signing-mappen til et offentlig repo.
+
+TESTSTATUS
+33 Python-tester dekker beregninger, grupper, historikk, kanalnedlasting,
+kontrollsum, ugyldige data, backup og synkroniseringskonflikter.
+Serverens admin- og oppdateringstilgang er testet med simulerte serverkall.
+APK er kompilert og signaturen kontrollert. Skjermlayout er tegnet med testdata
+ved 1280x720 og 1920x1080. Native Android, Windows-installasjon og fysisk skjerm
+2 er ennå ikke prøvekjørt på enhetene. GitHub-pipeline er ikke kjørt ennå.

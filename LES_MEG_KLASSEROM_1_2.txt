@@ -1,0 +1,1 @@
+Erstattet av versjon 1.3.0. Se LES_MEG.txt for gjeldende klasseromsfunksjoner.

@@ -1,0 +1,31 @@
+YSK · SYNKRONISERING · GJELDENDE SKOLEOPPSETT
+
+Skolens Supabase-prosjekt er aktivert, inkludert flere lærere og admin.
+Project URL: https://otuemdgmymgognzghmnu.supabase.co
+Publishable key: sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu
+Bruk din eksisterende konto. Nye lærere opprettes av admin i app/program.
+Alle lærere skal ha hver sin konto; ikke del administratorkontoen.
+
+Android: Innstillinger > Logg inn og koble til. Lagre en tur og synkroniser.
+PC: Telefon / sky > Logg inn og koble til. PC henter skolens turer hvert
+10. sekund mens den kjører. Telefonen kan sende mens PC er avslått.
+Android lagrer først lokalt. Bakgrunnsjobber prøver når det er nett.
+Androids batterisparing kan forsinke jobber; åpne appen og synkroniser hvis
+noe står som ventende. Telefon og PC trenger ikke samme Wi-Fi.
+
+PC-registreringer og lokale endringer lastes ikke opp; telefonens turer
+sendes til Supabase og hentes av PC. Den første innloggingen knytter
+telefonens lokale turer til kontoen; PC knyttes til skolen.
+Alle aktive medlemmer ser skolens turer. Bare eieren kan sende/end­re
+sine turer. Samme elev/kurs/bil/turnummer finnes én gang i skolen.
+Ved samme registrering fra flere lærere må den opprinnelige eieren redigere.
+
+PC beholder lokale endringer ved konflikt. Telefon / sky viser konflikten.
+Bruk telefonens versjoner ved konflikt tar backup først og krever valgt handling.
+Ikke slett appdata eller avinstaller før ventende turer er sendt.
+Telefonens økt krypteres med Android Keystore; Windows bruker DPAPI.
+
+setup.sql og shared_school_proposal.sql er referanse til tidligere oppsett.
+De er ikke nødvendig å kjøre på det aktive prosjektet og utgjør ikke en
+komplett nyinstallasjon. Se migrations for oppdateringsschema og les
+LES_MEG.txt / release_portal/OPPSETT.txt for nåværende tilstand.
