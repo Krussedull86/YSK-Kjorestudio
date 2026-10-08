@@ -1,5 +1,6 @@
 -- Synthetic records only; no real trips changed. Always roll back.
 begin;
+set local role service_role;
 do $$
 declare u uuid;org uuid;test_id uuid:=gen_random_uuid();test_name text:='__dist_test_'||gen_random_uuid()::text;p jsonb;r jsonb;log jsonb;
 begin

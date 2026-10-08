@@ -14,7 +14,7 @@ Installer APK over eksisterende app. Kjør den separate `YSK_Kjorestudio.exe` p�
 
 ## Distribusjon (dev 1.9.0)
 
-Admin velger **Kursoppsett** på PC eller under **Turer, kurs og biler → Kurs** på Android. Angi antall aktive turer slik at tur 4 er aktiv, **antall distribusjonsstopp (1–30)** og **forventet totaltid i minutter**. 0 stopp slår av stoppplanen. Frister angis som minutter fra start, f.eks. `15; 35; 60`. Tomt fristfelt fordeler totaltiden jevnt mellom stoppene.
+Admin velger **Kursoppsett** på PC eller under **Turer, kurs og biler → Kurs** på Android. Angi antall aktive turer slik at tur 4 er aktiv, **antall distribusjonsstopp (1–30)** og **forventet totaltid i minutter**. 0 stopp slår av stoppplanen. Totaltiden fordeles automatisk jevnt mellom stoppene.
 
 Android: velg sjåfør, kurs, bil og **Transportoppdrag 1 (distribusjon)**. Trykk **Start distribusjonsoppdrag**, deretter **Rygget til rampe** eller **Avbryt stopp** for hvert stopp. Avbrudd kan ha en grunn. Klokken inkluderer lasting, venting og pauser og fortsetter mens appen er lukket. Meny → **Fortsett tur** gjenåpner utkastet. Etter alle stopp: **Avslutt distribusjonsoppdrag**, fyll øvrige målinger/vurderinger og **Lagre tur**. Tidsplanen kopieres ved Start og endres ikke av senere kursendringer.
 

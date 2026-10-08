@@ -126,19 +126,19 @@ class App:
  def setup_course(self):
   dialog=tk.Toplevel(self.root);dialog.title('Kursoppsett')
   name=tk.StringVar(value=self.fields['course'].get());count=tk.StringVar(value=str(course_count(self.store,name.get())))
-  stop_count=tk.StringVar();total=tk.StringVar();deadlines=tk.StringVar()
+  stop_count=tk.StringVar();total=tk.StringVar()
   def load(*args):
-   config=course_config(self.store,name.get());p=config['distribution_plan'];count.set(str(config['active_trips']));stop_count.set(str(p['stop_count']));total.set(str(p['expected_minutes']));deadlines.set('; '.join(f'{n:g}' for n in p['deadlines']))
+   config=course_config(self.store,name.get());p=config['distribution_plan'];count.set(str(config['active_trips']));stop_count.set(str(p['stop_count']));total.set(str(p['expected_minutes']))
   load();name.trace_add('write',load)
   ttk.Label(dialog,text='Kursnavn').pack();ttk.Combobox(dialog,textvariable=name,values=course_names(self.store)).pack(padx=20,pady=8)
   ttk.Label(dialog,text='Antall aktive turer (tur 1 til valgt antall)').pack();ttk.Combobox(dialog,textvariable=count,values=[1,2,3,4,5],state='readonly').pack(padx=20,pady=8)
   ttk.Label(dialog,text='\n'.join(f'{i}. {n}' for i,n in enumerate(NAMES,1))).pack(padx=20,pady=8)
-  for label,var in [('Antall distribusjonsstopp (0–30; 0 = av)',stop_count),('Forventet totaltid i minutter',total),('Frister fra start, f.eks. 15; 35; 60 (tomt = jevn fordeling)',deadlines)]:
+  for label,var in [('Antall distribusjonsstopp (0–30; 0 = av)',stop_count),('Forventet totaltid i minutter',total)]:
    ttk.Label(dialog,text=label).pack(padx=20);ttk.Entry(dialog,textvariable=var,width=55).pack(padx=20,pady=5)
   def done():
    try:
     from distribution import plan
-    distribution_plan=plan(stop_count.get(),total.get(),deadlines.get())
+    distribution_plan=plan(stop_count.get(),total.get())
     course=name.get().strip();number=int(count.get())
     if not course or len(course)>100 or number not in range(1,6):raise ValueError('Velg kursnavn og 1–5 turer.')
     if hasattr(self,'management') and self.cloud_panel.receiver.load():
