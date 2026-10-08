@@ -1,3 +1,5 @@
+1.8.1 / bygg 20 – Dev: påkrevd innlogging før tilgang til PC og Android. Registrering, resultater, menyer og lokal mobilserver åpnes først etter serverkontroll av aktiv brukerkonto. Lagret økt kontrolleres ved oppstart. Logg ut går tilbake til innlogging uten å slette lokale turer.
+
 1.8.0 · bygg 19 (dev)
 - Skoler og avdelinger: opprett, endre navn og tildel brukere i adminpanelet på PC og Android.
 - Innlogging med e-post og passord; appen håndterer offentlig API-nøkkel og adresse.

@@ -2,19 +2,28 @@ package no.talappen.ysk;
 import android.content.*;import org.json.*;import java.net.*;import java.io.*;import java.util.*;
 public class Sync {
  public static final String DEFAULT_URL="https://otuemdgmymgognzghmnu.supabase.co", DEFAULT_API="sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu";
+ static class LoginRequired extends Exception {LoginRequired(String message){super(message);}}
  static class ApiFailure extends Exception {final int status;final String code;ApiFailure(int status,String message,String code){super(message);this.status=status;this.code=code;}}
  static JSONArray getRows(String url,String api,String token)throws Exception {
   HttpURLConnection h=(HttpURLConnection)new URL(url).openConnection();h.setConnectTimeout(15000);h.setReadTimeout(20000);h.setRequestProperty("apikey",api);h.setRequestProperty("Authorization","Bearer "+token);
   try{int status=h.getResponseCode();InputStream stream=status>=400?h.getErrorStream():h.getInputStream();StringBuilder raw=new StringBuilder();if(stream!=null)try(BufferedReader r=new BufferedReader(new InputStreamReader(stream,"UTF-8"))){String line;while((line=r.readLine())!=null)raw.append(line);}if(status>=400){JSONObject error=new JSONObject(raw.toString());throw new ApiFailure(status,error.optString("message","HTTP "+status),error.optString("code"));}return new JSONArray(raw.toString());}finally{h.disconnect();}
  }
  static JSONObject membership(String url,String api,JSONObject session)throws Exception{
-  try{JSONArray rows=getRows(url+"/rest/v1/ysk_memberships?select=organization_id,role,active,display_name&user_id=eq."+session.getJSONObject("user").getString("id"),api,session.getString("access_token"));if(rows.length()==0||!rows.getJSONObject(0).getBoolean("active"))throw new Exception("Du har ikke aktiv tilgang til skolen.");return rows.getJSONObject(0);}catch(ApiFailure e){if(e.status==404&&(e.code.equals("PGRST205")||e.code.equals("42P01")))return null;throw e;}
+  try{JSONArray rows=getRows(url+"/rest/v1/ysk_memberships?select=organization_id,role,active,display_name&user_id=eq."+session.getJSONObject("user").getString("id"),api,session.getString("access_token"));if(rows.length()==0||!rows.getJSONObject(0).getBoolean("active"))throw new LoginRequired("Du har ikke aktiv tilgang til skolen.");return rows.getJSONObject(0);}catch(ApiFailure e){if(e.status==404&&(e.code.equals("PGRST205")||e.code.equals("42P01")))return null;if(e.status==401||e.status==403)throw new LoginRequired("Logg inn på nytt for å få tilgang.");throw e;}
  }
  public static synchronized JSONObject admin(Context c,JSONObject body)throws Exception{
   SharedPreferences p=c.getSharedPreferences("cloud",0);String url=p.getString("url",""),api=p.getString("api","");if(url.isEmpty())throw new Exception("Logg inn under Innstillinger først.");JSONObject s=session(c,url,api);
   try{return request(url+"/functions/v1/ysk-admin",api,s.getString("access_token"),body);}catch(ApiFailure e){if(e.status==404)throw new Exception("Skole/admin må aktiveres i Supabase før brukeradministrasjon virker.");throw e;}
  }
 
+ public static synchronized JSONObject authorize(Context c)throws Exception{
+  JSONObject info=admin(c,new JSONObject().put("action","me"));JSONObject member=info.optJSONObject("member");if(member==null||!member.optBoolean("active")||!Arrays.asList("admin","teacher").contains(member.optString("role"))||member.optString("organization_id").isEmpty())throw new LoginRequired("Du har ikke aktiv tilgang. Kontakt administratoren.");
+  try(TripDb db=new TripDb(c)){db.bind(c.getSharedPreferences("cloud",0).getString("url","")+"|"+member.getString("user_id"));db.bindSchool(member.getString("organization_id"));}
+  c.getSharedPreferences("cloud",0).edit().putString("account",info.toString()).commit();return info;
+ }
+ public static synchronized void logout(Context c){
+  SharedPreferences p=c.getSharedPreferences("cloud",0);try{JSONObject s=new JSONObject(Secure.get(c));request(p.getString("url","")+"/auth/v1/logout?scope=local",p.getString("api",""),s.getString("access_token"),new JSONObject());}catch(Exception ignored){}finally{c.getSharedPreferences("secure",0).edit().remove("session").commit();p.edit().remove("url").remove("api").remove("account").commit();android.app.job.JobScheduler jobs=c.getSystemService(android.app.job.JobScheduler.class);jobs.cancel(71);jobs.cancel(72);}
+ }
  static JSONObject request(String url,String api,String token,JSONObject body)throws Exception{
   HttpURLConnection h=(HttpURLConnection)new URL(url).openConnection();h.setConnectTimeout(15000);h.setReadTimeout(20000);h.setRequestMethod("POST");h.setRequestProperty("apikey",api);h.setRequestProperty("Content-Type","application/json");if(token!=null){h.setRequestProperty("Authorization","Bearer "+token);h.setRequestProperty("Prefer","resolution=merge-duplicates,return=minimal");}h.setDoOutput(true);
   try{byte[] b=body.toString().getBytes("UTF-8");h.setFixedLengthStreamingMode(b.length);try(OutputStream out=h.getOutputStream()){out.write(b);}int status=h.getResponseCode();InputStream in=status>=400?h.getErrorStream():h.getInputStream();String text="";if(in!=null)try(BufferedReader r=new BufferedReader(new InputStreamReader(in,"UTF-8"))){StringBuilder s=new StringBuilder();String line;while((line=r.readLine())!=null)s.append(line);text=s.toString();}if(status>=400){String error="HTTP "+status,code="";try{JSONObject e=new JSONObject(text);error=e.optString("msg",e.optString("message",e.optString("error_description",error)));code=e.optString("code");}catch(Exception ignored){}throw new ApiFailure(status,error,code);}return text.isEmpty()?new JSONObject():new JSONObject(text);}finally{h.disconnect();}
@@ -31,7 +40,7 @@ public class Sync {
  }
  static JSONObject session(Context c,String url,String api)throws Exception{
   String raw=Secure.get(c);if(raw.isEmpty())throw new Exception("Koble til skykonto først.");JSONObject s=new JSONObject(raw);
-  if(s.optLong("expires_at",0)<=System.currentTimeMillis()/1000+90){s=request(url+"/auth/v1/token?grant_type=refresh_token",api,null,new JSONObject().put("refresh_token",s.getString("refresh_token")));Secure.put(c,s.toString());}return s;
+  if(s.optLong("expires_at",0)<=System.currentTimeMillis()/1000+90){try{s=request(url+"/auth/v1/token?grant_type=refresh_token",api,null,new JSONObject().put("refresh_token",s.getString("refresh_token")));}catch(ApiFailure e){if(e.status==400||e.status==401||e.status==403)throw new LoginRequired("Innloggingen er utløpt. Logg inn på nytt.");throw e;}Secure.put(c,s.toString());}return s;
  }
  static List<JSONObject> ownRows(String url,String api,String token,String owner)throws Exception{
   List<JSONObject> all=new ArrayList<>();for(int offset=0;;offset+=500){JSONArray page=getRows(url+"/rest/v1/ysk_trips?select=id,payload,revision,deleted_at&owner_id=eq."+owner+"&order=id&limit=500&offset="+offset,api,token);for(int i=0;i<page.length();i++)all.add(page.getJSONObject(i));if(page.length()<500){Collections.sort(all,(a,b)->Boolean.compare(a.isNull("deleted_at"),b.isNull("deleted_at")));return all;}}

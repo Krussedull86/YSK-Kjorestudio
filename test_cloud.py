@@ -1,6 +1,6 @@
 import tempfile,unittest,uuid
 from unittest.mock import patch
-from cloud_sync import APIError
+from cloud_sync import APIError,LoginRequired
 from pathlib import Path
 from cloud_sync import Receiver,fingerprint,endpoint
 from core import Store,QUAL
@@ -44,7 +44,7 @@ class CloudTests(unittest.TestCase):
   cfg={'url':'https://school.example','api':'public','session':{'user':{'id':self.id},'access_token':'token'}}
   with patch('cloud_sync.request',side_effect=APIError('missing',404,'PGRST205')):self.assertIsNone(self.receiver.membership(cfg))
   with patch('cloud_sync.request',side_effect=APIError('denied',403)):
-   with self.assertRaises(APIError):self.receiver.membership(cfg)
+   with self.assertRaises(LoginRequired):self.receiver.membership(cfg)
   with patch('cloud_sync.request',return_value=[{'active':False}]):
    with self.assertRaises(ValueError):self.receiver.membership(cfg)
  def test_school_binding_upgrade(self):

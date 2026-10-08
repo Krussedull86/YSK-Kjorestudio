@@ -270,9 +270,29 @@ if __name__=='__main__':
   try:ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
   except Exception:pass
  from design import classroom_class
- root=tk.Tk();app=classroom_class(App)(root)
- if '--demo' not in sys.argv:
-  from cloud_sync import CloudPanel
+ from cloud_sync import Receiver,CloudPanel
+ from auth_gate import LoginGate
+ root=tk.Tk()
+ receiver=Receiver(Store(DATA/'ysk.db'),DATA/'cloud_session.dpapi')
+ def open_application():
+  app=classroom_class(App)(root)
+  app.authenticated=True
+  def lock_application():
+   if not app.authenticated:return
+   app.authenticated=False
+   if hasattr(app,'cloud_panel'):app.cloud_panel.closed=True
+   root.withdraw()
+   if app.display:
+    try:app.display.destroy()
+    except Exception:pass
+   if app.http:
+    app.http.shutdown();app.http.server_close()
+   for timer_id in root.tk.call('after','info'):
+    try:root.after_cancel(timer_id)
+    except Exception:pass
+   for widget in root.winfo_children():widget.destroy()
+   LoginGate(root,receiver,open_application);root.deiconify()
+  app.lock=lock_application
   app.cloud_panel=CloudPanel(app,DATA/'cloud_session.dpapi')
   from management import ManagementPanel
   app.management=ManagementPanel(app,app.cloud_panel.receiver)
@@ -280,4 +300,5 @@ if __name__=='__main__':
   app.admin_panel=AdminPanel(app,app.cloud_panel.receiver)
   from updates import UpdatesPanel
   app.updates_panel=UpdatesPanel(app,app.cloud_panel.receiver,DATA)
+ LoginGate(root,receiver,open_application)
  root.mainloop()
