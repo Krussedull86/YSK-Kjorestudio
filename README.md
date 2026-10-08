@@ -39,3 +39,6 @@ Android bygges med JDK 17 og SDK 35 gjennom `android/build_android.py`. Windows 
 
 ### Separate dev-oppdateringer
 Windows-filer bygger bare Windows; filer under `android/` bygger bare Android. Felles sky- og byggeoppsett bygger begge. Dokumentasjon alene starter ingen bygg. I GitHub Actions → YSK dev → Run workflow kan du velge `auto`, `windows`, `android` eller `both`. En push med `[windows-only]` eller `[android-only]` i siste commit-tittel velger eksplisitt bare den plattformen. Øk `BUILD` i `version.py` før en utgivelse; byggnummeret er en felles, stigende utgivelsessekvens. Android-manifestet får utgivelsens versjon under bygging. Plattformen som ikke publiseres beholder forrige oppdatering og versjon.
+
+### Kursoppsett og sammenligning (dev)
+Admin velger kursnavn og 1–5 aktive turer via Kursoppsett på PC eller Administrer → Kurs → Kursoppsett på Android. Turene aktiveres fra 1 til valgt antall; eksisterende registreringer beholdes. Gamle kurs har fem aktive turer. Kursoppsettet hentes ved synkronisering og er tilgjengelig uten nett etterpå. Windows kan også ha lokale kursoppsett uten skykonto. Klasserommet viser turenes navn; Sammenlign turer velger hvilke registreringer som inngår i historikken, og Sammenlign fra på storskjermen velger startturen.

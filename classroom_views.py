@@ -1,9 +1,11 @@
 from classroom import board
+from course_setup import trip_number
 from core import QUAL,metrics
 MODES=['Samlet poeng','Forbedring','Forbruk','Tid per km','Stopp per km','Trafikksikkerhet','Fartsavpassing','Fartsøkning','Komfort','Vurderinger','Siste turer']
 LABELS={'trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}
 RATING={'Bra':100,'Middel':50,'Svak':0}
 def projection(rows,weights,mode='Samlet poeng',baseline='Første tur',**filters):
+ baseline=trip_number(baseline)
  out=board(rows,weights,**filters)
  for d in out:
   history=d['history'];start=history[0] if baseline=='Første tur' else next((r for r in history if str(r['trip'])==str(baseline)),None)

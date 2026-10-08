@@ -43,6 +43,7 @@ public class Sync {
    List<JSONObject> rows=db.rows(true);
    SharedPreferences p=c.getSharedPreferences("cloud",0);String url=p.getString("url",""),api=p.getString("api","");if(url.isEmpty())return "Lagret på telefonen. Koble til sky under Innstillinger for å sende.";
    JSONObject s=session(c,url,api);JSONObject member=membership(url,api,s);String token=s.getString("access_token"),owner=s.getJSONObject("user").getString("id");db.bind(url+"|"+owner);int sent=0,failed=0;
+   if(member!=null){JSONArray courses=request(url+"/functions/v1/ysk-admin",api,token,new JSONObject().put("action","course_setup_list")).getJSONArray("rows");c.getSharedPreferences("cloud",0).edit().putString("course_setup",courses.toString()).commit();}
    // Pull sent rows first, so upgraded databases acquire their cloud revision.
    List<JSONObject> remoteRows=ownRows(url,api,token,owner);for(JSONObject r:remoteRows){try{db.remote(r,false);}catch(Exception ignored){}}
    rows=db.rows(true);

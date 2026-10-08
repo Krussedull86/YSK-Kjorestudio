@@ -165,6 +165,8 @@ class Receiver:
     rows=request(url+'/rest/v1/ysk_trips?'+urllib.parse.urlencode(params),api,s['access_token']);allrows.extend(rows)
     if len(rows)<500:break
     last=rows[-1]
+   from course_setup import import_courses
+   if member:import_courses(self.store,request(url+'/functions/v1/ysk-admin',api,s['access_token'],{'action':'course_setup_list'})['rows'])
    n,errors=self.import_rows(allrows,force)
    if allrows:cfg['cursor']=allrows[-1]['updated_at'];self.save(cfg)
    with self.store.conn() as c:persistent=[row[0] for row in c.execute('SELECT message FROM cloud_conflicts ORDER BY id')]

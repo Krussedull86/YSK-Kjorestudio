@@ -1,3 +1,4 @@
+from course_setup import trip_name,course_count
 import tkinter as tk
 from tkinter import ttk
 from core import QUAL,metrics
@@ -33,11 +34,12 @@ def classroom_class(Base):
    ttk.Label(self.dashboard,text='Velg gruppe og tur. Klikk en sjåfør for å undersøke utviklingen sammen med klassen.',foreground=MUTED).pack(anchor='w',pady=(6,18))
    self.stats=ttk.Frame(self.dashboard);self.stats.pack(fill='x',pady=(0,18))
    self.stat_vars=[]
-   for title in ['SJÅFØRER','REGISTRERTE TURER','SNITT FORBRUK','FULLFØRT TUR 5']:
+   for title in ['SJÅFØRER','REGISTRERTE TURER','SNITT FORBRUK','FULLFØRT KURS']:
     f=tk.Frame(self.stats,bg=PANEL,padx=20,pady=14);f.pack(side='left',fill='x',expand=True,padx=(0,10));tk.Label(f,text=title,bg=PANEL,fg=MUTED,font=('Segoe UI',10,'bold')).pack(anchor='w');v=tk.StringVar(value='—');self.stat_vars.append(v);tk.Label(f,textvariable=v,bg=PANEL,fg=TEAL,font=('Segoe UI',25,'bold')).pack(anchor='w')
    controls=ttk.Frame(self.dashboard);controls.pack(fill='x',pady=(0,15))
    for key,label in [('course','Kurs'),('vehicle','Kjøretøy'),('trip','Tur')]:
     ttk.Label(controls,text=label,foreground=MUTED).pack(side='left',padx=(0,6));v=self.filters[key][0];b=ttk.Combobox(controls,textvariable=v,state='readonly',width=16);b.pack(side='left',padx=(0,16));b.bind('<<ComboboxSelected>>',lambda e:self.refresh());setattr(self,'dash_'+key,b)
+   ttk.Button(controls,text='Sammenlign turer',command=self.compare_dialog).pack(side='left')
    self.mode=tk.StringVar(value='Samlet poeng');box=ttk.Combobox(controls,textvariable=self.mode,values=MODES,width=19,state='readonly');box.pack(side='right',padx=5);box.bind('<<ComboboxSelected>>',lambda e:self.update_mode())
    ttk.Button(controls,text='Vis på storskjerm',style='Accent.TButton',command=self.bigscreen).pack(side='right',padx=8)
    self.body=ttk.Frame(self.dashboard);self.body.pack(fill='both',expand=True);self.body.columnconfigure(0,weight=3);self.body.columnconfigure(1,weight=2);self.body.rowconfigure(0,weight=1)
@@ -90,15 +92,15 @@ def classroom_class(Base):
    if not self.ready:return
    for key,(v,box) in self.filters.items():getattr(self,'dash_'+key)['values']=box['values']
    rows=self.filtered(self.rows);people={(d['course'],d['vehicle'],d['driver']) for d in rows};avg=sum(metrics(d)['forbruk10'] for d in rows)/len(rows) if rows else None
-   vals=[str(len(people)),str(len(rows)),f'{avg:.3f} L/10 km' if avg is not None else '—',str(len({(d['course'],d['vehicle'],d['driver']) for d in self.rows if d['trip']==5 and self.filters['course'][0].get() in ['Alle',d['course']] and self.filters['vehicle'][0].get() in ['Alle',d['vehicle']]}))]
+   vals=[str(len(people)),str(len(rows)),f'{avg:.3f} L/10 km' if avg is not None else '—',str(len({(d['course'],d['vehicle'],d['driver']) for d in self.rows if d['trip']==course_count(self.store,d['course']) and self.filters['course'][0].get() in ['Alle',d['course']] and self.filters['vehicle'][0].get() in ['Alle',d['vehicle']]}))]
    for v,val in zip(self.stat_vars,vals):v.set(val)
    for child in self.card_frame.winfo_children():child.destroy()
    if not self.ranked:
     f=tk.Frame(self.card_frame,bg=PANEL,padx=25,pady=40);f.pack(fill='x');tk.Label(f,text='Klar for første kjøretur?',bg=PANEL,fg=TEXT,font=('Segoe UI',22,'bold')).pack(anchor='w');tk.Label(f,text='Registrer på PC eller åpne mobiladressen øverst.\nResultatene vises her når turen er lagret.',bg=PANEL,fg=MUTED,justify='left',font=('Segoe UI',12)).pack(anchor='w',pady=12)
-   self.classroom_rows=projection(self.rows,self.store.settings(),mode=self.mode.get(),**{k:v.get() for k,(v,box) in self.filters.items()})
+   self.classroom_rows=projection(self.rows,self.store.settings(),mode=self.mode.get(),selected_trips=self.compare_trips,**{k:v.get() for k,(v,box) in self.filters.items()})
    for d in self.classroom_rows:
     f=tk.Frame(self.card_frame,bg=PANEL,padx=18,pady=14,cursor='hand2');f.pack(fill='x',pady=(0,10))
-    group=f"{d['course']} · {d['vehicle']} · TUR {d['trip']}";title=tk.Label(f,text=f"{'—' if d['view_place'] is None or self.mode.get()=='Siste turer' else '#'+str(d['view_place'])}  {d['driver']}",bg=PANEL,fg=TEXT,font=('Segoe UI',18,'bold'),anchor='w');title.pack(fill='x');tk.Label(f,text=group,bg=PANEL,fg=MUTED,font=('Segoe UI',10)).pack(anchor='w',pady=(3,8))
+    group=f"{d['course']} · {d['vehicle']} · {trip_name(d['trip'])}";title=tk.Label(f,text=f"{'—' if d['view_place'] is None or self.mode.get()=='Siste turer' else '#'+str(d['view_place'])}  {d['driver']}",bg=PANEL,fg=TEXT,font=('Segoe UI',18,'bold'),anchor='w');title.pack(fill='x');tk.Label(f,text=group,bg=PANEL,fg=MUTED,font=('Segoe UI',10)).pack(anchor='w',pady=(3,8))
     tk.Label(f,text=value_text(d,self.mode.get())+f"    ·    {d['forbruk10']:.2f} L/10 km    ·    {int(d['stops'])} stopp",bg=PANEL,fg=TEAL,font=('Segoe UI',12,'bold')).pack(anchor='w')
     gain=d['fuel_improvement'];summary='Første registrerte tur' if len(d['history'])<2 else 'Utgangsforbruk 0' if gain is None else f'{gain:+.1f}% forbedring i forbruk'
     tk.Label(f,text=summary,bg=PANEL,fg=TEAL if gain is not None and gain>=0 else GOLD,font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(6,3))
@@ -114,7 +116,7 @@ def classroom_class(Base):
    self.focus_driver=(d['course'],d['vehicle'],d['driver'])
    for child in self.detail.winfo_children():child.destroy()
    tk.Label(self.detail,text=d['driver'],bg=PANEL,fg=TEXT,font=('Segoe UI',23,'bold')).pack(anchor='w');tk.Label(self.detail,text='UTVIKLING · TUR 1–5',bg=PANEL,fg=TEAL,font=('Segoe UI',10,'bold')).pack(anchor='w',pady=(4,15))
-   ds=sorted([r for r in self.rows if (r['course'],r['vehicle'],r['driver'])==self.focus_driver],key=lambda r:r['trip'])
+   ds=sorted([r for r in self.rows if (self.compare_trips is None or r['trip'] in self.compare_trips) and (r['course'],r['vehicle'],r['driver'])==self.focus_driver],key=lambda r:r['trip'])
    chips=tk.Frame(self.detail,bg=PANEL);chips.pack(fill='x')
    for n in range(1,6):
     r=next((x for x in ds if x['trip']==n),None)
@@ -123,7 +125,7 @@ def classroom_class(Base):
    first,last=metrics(ds[0]),metrics(ds[-1]);delta=last['forbruk10']-first['forbruk10'];pct=100*delta/first['forbruk10'] if first['forbruk10'] else None
    summary='Første registrerte tur' if len(ds)==1 else f"Forbruk: {delta:+.3f} L/10 km"+(f' ({pct:+.1f} %)' if pct is not None else '')
    tk.Label(self.detail,text=summary,bg=PANEL,fg=TEAL if delta<=0 else GOLD,font=('Segoe UI',13,'bold')).pack(anchor='w')
-   tk.Label(self.detail,text=f"Vurderinger · tur {d['trip']}",bg=PANEL,fg=MUTED).pack(anchor='w',pady=(20,8))
+   tk.Label(self.detail,text=f"Vurderinger · {trip_name(d['trip'])}",bg=PANEL,fg=MUTED).pack(anchor='w',pady=(20,8))
    for k in QUAL:
     f=tk.Frame(self.detail,bg=PANEL);f.pack(fill='x',pady=4);tk.Label(f,text={'avpassing':'Fartsavpassing','økning':'Fartsøkning'}.get(k,k.capitalize()),bg=PANEL,fg=TEXT).pack(side='left');tk.Label(f,text='Middels' if d[k]=='Middel' else d[k],bg=PANEL,fg={'Bra':TEAL,'Middel':GOLD,'Svak':'#bb414e'}[d[k]],font=('Segoe UI',11,'bold')).pack(side='right')
    tk.Label(self.detail,text=f"{d.get('date','')} {d.get('start_time','')} · Lærer: {d.get('teacher','')}",bg=PANEL,fg=MUTED,wraplength=330,justify='left').pack(anchor='w',pady=6)

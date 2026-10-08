@@ -1,3 +1,5 @@
+1.7.0 / bygg 17 – Dev: kursoppsett med 1–5 aktive turer. Optimaltur 1–3 og Transportoppdrag 1 (distribusjon) / 2 (langtur). Kursoppsett deles via skyen. Navn i registrering og klasserom. Velg hvilke turer som inngår i sammenligningen og hvilken tur forbedring måles fra.
+
 1.6.4 / bygg 16 – Android dev-utgave etter publisering av Windows og Android til stabil. Android får korrekt versjonsnummer fra byggeoppsettet. Kun Android bygges og publiseres.
 
 1.6.3 / bygg 15 – Uavhengige Windows-/Android-bygg basert på endrede filer. Manuelt valg: auto, windows, android, both. Oppdateringssjekk beholder forrige utgave for urørt plattform.

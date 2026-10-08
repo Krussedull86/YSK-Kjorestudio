@@ -4,6 +4,7 @@ import os,sys,socket,secrets,threading,json,csv,ctypes,datetime
 from pathlib import Path
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from core import Store,QUAL,WEIGHTS,metrics,ranking,changes,missing_fields
+from course_setup import NAMES,trip_number,trip_name,course_count,save_course,course_names
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))
 DATA=Path(os.getenv('LOCALAPPDATA',Path.home()))/('YSK_Kjorestudio_Demo' if '--demo' in sys.argv else 'YSK_Kjorestudio')
 
@@ -68,19 +69,22 @@ class App:
   register=ttk.Frame(nb,padding=15);overview=ttk.Frame(nb,padding=10);progress=ttk.Frame(nb,padding=10);settings=ttk.Frame(nb,padding=15)
   for frame,title in [(register,'Registrer / rediger'),(overview,'Rangering og turer'),(progress,'Utvikling tur 1–5'),(settings,'Vekter og forklaring')]:nb.add(frame,text=title)
   self.nb=nb;self.register_frame=register;self.fields={}
-  self.catalog_boxes={};self.rating_positions={}
+  self.catalog_boxes={};self.rating_positions={};self.compare_trips=None
   labels=[('driver','Sjåfør ▾'),('course','Kurs / gruppe ▾'),('vehicle','Bil / sammenligningsgruppe ▾'),('trip','Tur (1–5)'),('date','Dato (ÅÅÅÅ-MM-DD)'),('start_time','Starttid (TT:MM)'),('minutes','Forbrukt tid (min eller mm:ss)'),('km','Kjørt distanse (km)'),('liters','Forbruk totalt (liter)'),('stops','Antall unødige stopp'),('average_speed','Gjennomsnitt km/t (valgfritt)'),('teacher','Lærer / signatur (navn eller initialer)'),('notes','Notater'),('trafikksikkerhet','Trafikksikkerhet'),('avpassing','Fartsavpassing'),('økning','Fartsøkning'),('komfort','Komfort')]
   for i,(k,label) in enumerate(labels):
    col=0 if i<9 else 2;row=i if i<9 else i-9
    ttk.Label(register,text=label).grid(row=row,column=col,sticky='w',padx=8,pady=6)
-   v=tk.StringVar(value='' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
+   v=tk.StringVar(value='' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
    self.fields[k]=v
    if k in QUAL:self.rating_positions[k]=(row,col+1)
-   if k in QUAL or k=='trip':widget=ttk.Combobox(register,textvariable=v,values=['','Bra','Middel','Svak','-'] if k in QUAL else [1,2,3,4,5],state='readonly',width=24)
+   if k in QUAL or k=='trip':widget=ttk.Combobox(register,textvariable=v,values=['','Bra','Middel','Svak','-'] if k in QUAL else NAMES,state='readonly',width=24)
    elif k in ['driver','course','vehicle']:
     widget=ttk.Combobox(register,textvariable=v,width=30);self.catalog_boxes[k]=widget
    else:widget=ttk.Entry(register,textvariable=v,width=32)
+   if k=='trip':self.trip_box=widget
    widget.grid(row=row,column=col+1,sticky='ew',padx=8,pady=6)
+  self.fields['course'].trace_add('write',lambda *a:self.update_trip_choices())
+  ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=12,column=1,pady=6)
   self.preview=tk.StringVar(value='Forbruk per 10 km beregnes fra liter og distanse. Kjørepoeng vises i rangeringen.')
   ttk.Label(register,textvariable=self.preview,wraplength=600).grid(row=9,column=0,columnspan=4,pady=6)
   def preview(*args):
@@ -114,13 +118,42 @@ class App:
   for c in cols:t.heading(c,text=c);t.column(c,width=110,minwidth=65)
   sy=ttk.Scrollbar(box,orient='vertical',command=t.yview);sx=ttk.Scrollbar(box,orient='horizontal',command=t.xview);t.configure(yscrollcommand=sy.set,xscrollcommand=sx.set)
   t.grid(row=0,column=0,sticky='nsew');sy.grid(row=0,column=1,sticky='ns');sx.grid(row=1,column=0,sticky='ew');box.rowconfigure(0,weight=1);box.columnconfigure(0,weight=1);return t
+ def update_trip_choices(self):
+  count=course_count(self.store,self.fields['course'].get())
+  self.trip_box['values']=NAMES[:count]
+  if not self.edit_id and trip_number(self.fields['trip'].get())>count:self.fields['trip'].set(NAMES[0])
+ def setup_course(self):
+  dialog=tk.Toplevel(self.root);dialog.title('Kursoppsett')
+  name=tk.StringVar(value=self.fields['course'].get());count=tk.StringVar(value=str(course_count(self.store,name.get())))
+  name.trace_add('write',lambda *a:count.set(str(course_count(self.store,name.get()))))
+  ttk.Label(dialog,text='Kursnavn').pack();ttk.Combobox(dialog,textvariable=name,values=course_names(self.store)).pack(padx=20,pady=8)
+  ttk.Label(dialog,text='Antall aktive turer (tur 1 til valgt antall)').pack();ttk.Combobox(dialog,textvariable=count,values=[1,2,3,4,5],state='readonly').pack(padx=20,pady=8)
+  ttk.Label(dialog,text='\n'.join(f'{i}. {n}' for i,n in enumerate(NAMES,1))).pack(padx=20,pady=8)
+  def done():
+   try:
+    course=name.get().strip();number=int(count.get())
+    if not course or len(course)>100 or number not in range(1,6):raise ValueError('Velg kursnavn og 1–5 turer.')
+    if hasattr(self,'management') and self.cloud_panel.receiver.load():
+     def saved(result):save_course(self.store,course,number);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
+     self.management.run(lambda:self.cloud_panel.receiver.admin('course_setup_save',name=course,active_trips=number),saved)
+    else:save_course(self.store,course,number);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
+   except Exception as e:messagebox.showerror('Kursoppsett',str(e))
+  ttk.Button(dialog,text='Lagre kursoppsett',command=done).pack(pady=12)
+ def compare_dialog(self):
+  dialog=tk.Toplevel(self.root);dialog.title('Turer som sammenlignes');values=[]
+  for n,name in enumerate(NAMES,1):
+   var=tk.BooleanVar(value=self.compare_trips is None or n in self.compare_trips);values.append(var);ttk.Checkbutton(dialog,text=name,variable=var).pack(anchor='w',padx=20,pady=5)
+  def done():
+   self.compare_trips=[n for n,var in enumerate(values,1) if var.get()];self.refresh();dialog.destroy()
+  ttk.Button(dialog,text='Bruk sammenligning',command=done).pack(pady=12)
  def reset(self):
   self.edit_id=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
-   if k not in ['course','vehicle']:v.set('' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
+   if k not in ['course','vehicle']:v.set('' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
  def save(self):
   try:
-   d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id
+   d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id;d['trip']=trip_number(d['trip'])
+   if not self.edit_id and d['trip']>course_count(self.store,d['course']):raise ValueError('Denne turen er ikke aktivert på kurset.')
    validated=self.store.validate(d)
    if missing_fields(validated) and getattr(self,'edit_revision',''):
     raise ValueError('Skyredigering: fullfør feltene eller bruk - før lagring. Nye uferdige turer kan lagres lokalt.')
@@ -136,7 +169,8 @@ class App:
   self.edit_id=d['id'];self.edit_revision=''
   if hasattr(self,'cloud_panel'):
    remote=self.cloud_panel.receiver.remote(d['id']);self.edit_revision=remote.get('revision','') if remote else ''
-  for k,v in self.fields.items():v.set(d.get(k,''))
+  for k,v in self.fields.items():v.set(trip_name(d['trip']) if k=='trip' else d.get(k,''))
+  self.update_trip_choices()
   self.editlabel.set('Redigerer eksisterende tur');self.nb.select(self.register_frame)
  def delete(self):
   ids=self.table.selection()
@@ -149,20 +183,20 @@ class App:
     return
   if messagebox.askyesno('Slett lokal tur','Slette den lokale turen? En sikkerhetskopi tas først.'):
    self.store.backup(DATA/('før_sletting_'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'.db'));self.store.delete(ids[0]);self.refresh()
- def filtered(self,rows):return [d for d in rows if all(v.get()=='Alle' or str(d[k])==v.get() for k,(v,box) in self.filters.items())]
+ def filtered(self,rows):return [d for d in rows if (self.compare_trips is None or d['trip'] in self.compare_trips) and all(v.get()=='Alle' or str(d[k])==str(trip_number(v.get()) if k=='trip' else v.get()) for k,(v,box) in self.filters.items())]
  def refresh(self):
   rows=self.store.all();self.rows=rows;self.all_rows=self.store.all(True)
   unfinished=sum(bool(missing_fields(d)) for d in self.all_rows)
   self.trip_warning.set(f'● {unfinished} uferdige turer – åpne dem for å fullføre. Bruk - for bevisst utelatte felt.' if unfinished else '')
-  for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in self.store.all(True)},key=str.casefold)
+  for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in self.store.all(True)} | (set(course_names(self.store)) if k=='course' else set()),key=str.casefold)
   for k,(v,box) in self.filters.items():
-   values=['Alle']+sorted({str(d[k]) for d in self.store.all(True)});box['values']=values
+   values=['Alle']+(NAMES if k=='trip' else sorted({str(d[k]) for d in self.store.all(True)} | (set(course_names(self.store)) if k=='course' else set())));box['values']=values
    if v.get() not in values:v.set('Alle')
   selected=self.table.selection();self.table.delete(*self.table.get_children());self.ranked=self.filtered(ranking(rows,self.store.settings()))
-  for d in self.ranked:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],d['trip'],d['score'],d['minutes'],f"{d['tid']:.3f}",f"{d['forbruk10']:.2f}",f"{d['fart']:.1f}",int(d['stops']),*[d[k] for k in QUAL]])
+  for d in self.ranked:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],trip_name(d['trip']),d['score'],d['minutes'],f"{d['tid']:.3f}",f"{d['forbruk10']:.2f}",f"{d['fart']:.1f}",int(d['stops']),*[d[k] for k in QUAL]])
   scored_ids={d['id'] for d in rows}
   for d in self.filtered(self.store.all(True)):
-   if d['id'] not in scored_ids:self.table.insert('', 'end',iid=d['id'],tags=('incomplete',) if missing_fields(d) else (),values=[('● ' if missing_fields(d) else '✓ ')+d['driver'],d['course'],d['vehicle'],d['trip'],'Ikke ferdig' if missing_fields(d) else '—',d['minutes'],'—','—','—',d['stops'],*[d[k] for k in QUAL]])
+   if d['id'] not in scored_ids:self.table.insert('', 'end',iid=d['id'],tags=('incomplete',) if missing_fields(d) else (),values=[('● ' if missing_fields(d) else '✓ ')+d['driver'],d['course'],d['vehicle'],trip_name(d['trip']),'Ikke ferdig' if missing_fields(d) else '—',d['minutes'],'—','—','—',d['stops'],*[d[k] for k in QUAL]])
   if selected and self.table.exists(selected[0]):self.table.selection_set(selected)
   psel=self.progress.selection();self.progress.delete(*self.progress.get_children());self.change_rows=changes(rows)
   for i,d in enumerate(self.change_rows):
