@@ -12,6 +12,14 @@ Installer APK over eksisterende app. Kjør den separate `YSK_Kjorestudio.exe` p�
 
 Én liten menylinje; status og innhold ruller, uten fast bunn. Tidtakeren ligger øverst i registreringen. **Start** fyller inn dato/starttid; **Stopp** fyller inn kjøretid. **Fortsett** gjenopptar samme måling. Meny → **Fortsett tur** åpner utkastet etter appbytte. Tidtakingen fortsetter med skjermen av. Nullstilling av klokken beholder manuelt registrert tid. Stopp før lagring.
 
+## Distribusjon (dev 1.9.0)
+
+Admin velger **Kursoppsett** på PC eller under **Turer, kurs og biler → Kurs** på Android. Angi antall aktive turer slik at tur 4 er aktiv, **antall distribusjonsstopp (1–30)** og **forventet totaltid i minutter**. 0 stopp slår av stoppplanen. Frister angis som minutter fra start, f.eks. `15; 35; 60`. Tomt fristfelt fordeler totaltiden jevnt mellom stoppene.
+
+Android: velg sjåfør, kurs, bil og **Transportoppdrag 1 (distribusjon)**. Trykk **Start distribusjonsoppdrag**, deretter **Rygget til rampe** eller **Avbryt stopp** for hvert stopp. Avbrudd kan ha en grunn. Klokken inkluderer lasting, venting og pauser og fortsetter mens appen er lukket. Meny → **Fortsett tur** gjenåpner utkastet. Etter alle stopp: **Avslutt distribusjonsoppdrag**, fyll øvrige målinger/vurderinger og **Lagre tur**. Tidsplanen kopieres ved Start og endres ikke av senere kursendringer.
+
+Stopploggen viser tid siden forrige registrerte stopp, totalt fra start, planlagt tid og forsinkelse/forsprang. Avbrutte stopp beholdes i loggen og teller ikke som gjennomførte leveringsstopp. **Unødige stopp** er en separat måling. På PC: åpne turen og velg **Vis distribusjonsstopp**, eller bruk stopptabellen fra elevdetaljene i klasseromsvisningen/storskjermen.
+
 ## Rediger og slett
 
 Android: **Mine turer → Administrer turer, kurs og biler**. PC: fanen **Turer, kurs og biler → Hent fra sky**. Velg tur, kurs eller bil og bruk redigering eller sletting. Kurs-/bilnavn endres på alle aktive tilhørende turer. Sletting av kurs eller bil flytter tilhørende turer til papirkurven, med antallet vist før bekreftelse. Turene kan gjenopprettes enkeltvis.

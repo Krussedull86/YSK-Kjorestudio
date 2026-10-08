@@ -84,8 +84,13 @@ class LiveDisplay:
    m=metrics(chosen);y=chart_bottom+20*s;txt(x,y,f"{trip_name(chosen['trip'])} · {chosen.get('date','')}",12,TEAL)
    txt(x,y+24*s,f"{chosen['minutes']:.2f} min  ·  {chosen['km']:.1f} km  ·  {m['fart']:.1f} km/t",13,width=sw)
    txt(x,y+46*s,f"{chosen['liters']:.2f} liter totalt  ·  {int(chosen['stops'])} stopp",13,width=sw)
-   for j,q in enumerate(QUAL):
-    color=TEAL if chosen[q]=='Bra' else GOLD if chosen[q]=='Middel' else RED;txt(x,y+(74+j*23)*s,LABELS[q],12,MUTED);txt(x+sw,y+(74+j*23)*s,'Middels' if chosen[q]=='Middel' else chosen[q],12,color,'ne')
+   if chosen.get('distribution'):
+    from distribution import summary as distribution_summary
+    txt(x,y+74*s,distribution_summary(chosen['distribution']),13,TEAL,width=sw)
+    button(x,y+119*s,sw,'Vis leveringsstopp og tider',lambda e:self.app.show_distribution(chosen,self.window))
+   else:
+    for j,q in enumerate(QUAL):
+     color=TEAL if chosen[q]=='Bra' else GOLD if chosen[q]=='Middel' else RED;txt(x,y+(74+j*23)*s,LABELS[q],12,MUTED);txt(x+sw,y+(74+j*23)*s,'Middels' if chosen[q]=='Middel' else chosen[q],12,color,'ne')
    txt(x,bottom-24*s,'Lærer: '+(chosen.get('teacher') or '—'),11,MUTED,width=sw)
   sync=getattr(self.app,'last_cloud_update',None);state='Sky hentet '+sync if sync else 'Lokale data';state='Venter på sky · viser lagrede data' if getattr(self.app,'cloud_waiting',False) else state
   txt(margin,h-60*s,f"{state} · Side {self.page+1}/{pages} · "+('Automatisk gjennomgang' if self.auto else 'Gjennomgang på dine premisser'),12,MUTED)

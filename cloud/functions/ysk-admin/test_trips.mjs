@@ -1,6 +1,7 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
-const source=fs.readFileSync(new URL('./trips.ts',import.meta.url),'utf8').replace('export async function','async function');
-const context={Number,encodeURIComponent};vm.createContext(context);vm.runInContext(source,context);
+const validators=fs.readFileSync(new URL('./distribution.ts',import.meta.url),'utf8').replaceAll('export function','function');
+const source=fs.readFileSync(new URL('./trips.ts',import.meta.url),'utf8').replace('export async function','async function').replace(/^import .*$/gm,'');
+const context={Number,encodeURIComponent};vm.createContext(context);vm.runInContext(validators+source,context);
 const calls=[];const server=async(path,method,body)=>{calls.push({path,method,body});return path.includes('/rpc/')?{status:409,message:'Conflict'}:[];};
 const member={user_id:'verified-user',organization_id:'verified-school',role:'teacher'};
 let result=await context.tripAction({action:'catalog_delete',kind:'course'},member,server);assert.equal(result.status,403);assert.equal(calls.length,0);

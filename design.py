@@ -129,6 +129,10 @@ def classroom_class(Base):
    for k in QUAL:
     f=tk.Frame(self.detail,bg=PANEL);f.pack(fill='x',pady=4);tk.Label(f,text={'avpassing':'Fartsavpassing','økning':'Fartsøkning'}.get(k,k.capitalize()),bg=PANEL,fg=TEXT).pack(side='left');tk.Label(f,text='Middels' if d[k]=='Middel' else d[k],bg=PANEL,fg={'Bra':TEAL,'Middel':GOLD,'Svak':'#bb414e'}[d[k]],font=('Segoe UI',11,'bold')).pack(side='right')
    tk.Label(self.detail,text=f"{d.get('date','')} {d.get('start_time','')} · Lærer: {d.get('teacher','')}",bg=PANEL,fg=MUTED,wraplength=330,justify='left').pack(anchor='w',pady=6)
+   if d.get('distribution'):
+    from distribution import summary as distribution_summary
+    tk.Label(self.detail,text=distribution_summary(d['distribution']),bg=PANEL,fg=TEAL,wraplength=330).pack(anchor='w',pady=5)
+    tk.Button(self.detail,text='Vis distribusjonsstopp og tider',command=lambda:self.show_distribution(d),bg=TEAL,fg='white',relief='flat').pack(anchor='w')
    tk.Label(self.detail,text=d.get('notes',''),bg=PANEL,fg=MUTED,wraplength=330,justify='left').pack(anchor='w',pady=12)
   def draw_curve(self,c,rows):
    c.delete('all');w=max(c.winfo_width(),280);h=c.winfo_height();vals=[metrics(r)['forbruk10'] for r in rows];hi=max(vals+[.01]);pts=[]

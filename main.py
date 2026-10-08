@@ -4,7 +4,7 @@ import os,sys,socket,secrets,threading,json,csv,ctypes,datetime
 from pathlib import Path
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from core import Store,QUAL,WEIGHTS,metrics,ranking,changes,missing_fields
-from course_setup import NAMES,trip_number,trip_name,course_count,save_course,course_names
+from course_setup import NAMES,trip_number,trip_name,course_count,save_course,course_names,course_config
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))
 DATA=Path(os.getenv('LOCALAPPDATA',Path.home()))/('YSK_Kjorestudio_Demo' if '--demo' in sys.argv else 'YSK_Kjorestudio')
 
@@ -45,7 +45,7 @@ def server(store):
 
 class App:
  def __init__(self,root):
-  self.root=root;self.store=Store(DATA/'ysk.db');self.edit_id=None;self.display=None
+  self.root=root;self.store=Store(DATA/'ysk.db');self.edit_id=None;self.edit_distribution=None;self.display=None
   if '--demo' in sys.argv and not self.store.all():
    from demo import seed
    seed(self.store)
@@ -84,6 +84,7 @@ class App:
    if k=='trip':self.trip_box=widget;widget.configure(width=40)
    widget.grid(row=row,column=col+1,sticky='ew',padx=8,pady=6)
   self.fields['course'].trace_add('write',lambda *a:self.update_trip_choices())
+  ttk.Button(register,text='Vis distribusjonsstopp',command=self.show_edit_distribution).grid(row=12,column=3,pady=6)
   ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=12,column=1,pady=6)
   self.preview=tk.StringVar(value='Forbruk per 10 km beregnes fra liter og distanse. Kjørepoeng vises i rangeringen.')
   ttk.Label(register,textvariable=self.preview,wraplength=600).grid(row=9,column=0,columnspan=4,pady=6)
@@ -125,20 +126,33 @@ class App:
  def setup_course(self):
   dialog=tk.Toplevel(self.root);dialog.title('Kursoppsett')
   name=tk.StringVar(value=self.fields['course'].get());count=tk.StringVar(value=str(course_count(self.store,name.get())))
-  name.trace_add('write',lambda *a:count.set(str(course_count(self.store,name.get()))))
+  stop_count=tk.StringVar();total=tk.StringVar();deadlines=tk.StringVar()
+  def load(*args):
+   config=course_config(self.store,name.get());p=config['distribution_plan'];count.set(str(config['active_trips']));stop_count.set(str(p['stop_count']));total.set(str(p['expected_minutes']));deadlines.set('; '.join(f'{n:g}' for n in p['deadlines']))
+  load();name.trace_add('write',load)
   ttk.Label(dialog,text='Kursnavn').pack();ttk.Combobox(dialog,textvariable=name,values=course_names(self.store)).pack(padx=20,pady=8)
   ttk.Label(dialog,text='Antall aktive turer (tur 1 til valgt antall)').pack();ttk.Combobox(dialog,textvariable=count,values=[1,2,3,4,5],state='readonly').pack(padx=20,pady=8)
   ttk.Label(dialog,text='\n'.join(f'{i}. {n}' for i,n in enumerate(NAMES,1))).pack(padx=20,pady=8)
+  for label,var in [('Antall distribusjonsstopp (0–30; 0 = av)',stop_count),('Forventet totaltid i minutter',total),('Frister fra start, f.eks. 15; 35; 60 (tomt = jevn fordeling)',deadlines)]:
+   ttk.Label(dialog,text=label).pack(padx=20);ttk.Entry(dialog,textvariable=var,width=55).pack(padx=20,pady=5)
   def done():
    try:
+    from distribution import plan
+    distribution_plan=plan(stop_count.get(),total.get(),deadlines.get())
     course=name.get().strip();number=int(count.get())
     if not course or len(course)>100 or number not in range(1,6):raise ValueError('Velg kursnavn og 1–5 turer.')
     if hasattr(self,'management') and self.cloud_panel.receiver.load():
-     def saved(result):save_course(self.store,course,number);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
-     self.management.run(lambda:self.cloud_panel.receiver.admin('course_setup_save',name=course,active_trips=number),saved)
-    else:save_course(self.store,course,number);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
+     def saved(result):save_course(self.store,course,number,distribution_plan);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
+     self.management.run(lambda:self.cloud_panel.receiver.admin('course_setup_save',name=course,active_trips=number,distribution_plan=distribution_plan),saved)
+    else:save_course(self.store,course,number,distribution_plan);self.fields['course'].set(course);self.update_trip_choices();self.refresh();dialog.destroy()
    except Exception as e:messagebox.showerror('Kursoppsett',str(e))
   ttk.Button(dialog,text='Lagre kursoppsett',command=done).pack(pady=12)
+ def show_distribution(self,d,parent=None):
+  from distribution_view import show
+  return show(parent or self.root,d)
+ def show_edit_distribution(self):
+  if self.edit_distribution is None:return messagebox.showinfo('Distribusjon','Åpne en registrert distribusjonstur med stopplogg først.')
+  self.show_distribution({'driver':self.fields['driver'].get(),'course':self.fields['course'].get(),'distribution':self.edit_distribution})
  def compare_dialog(self):
   dialog=tk.Toplevel(self.root);dialog.title('Turer som sammenlignes');values=[]
   for n,name in enumerate(NAMES,1):
@@ -147,12 +161,13 @@ class App:
    self.compare_trips=[n for n,var in enumerate(values,1) if var.get()];self.refresh();dialog.destroy()
   ttk.Button(dialog,text='Bruk sammenligning',command=done).pack(pady=12)
  def reset(self):
-  self.edit_id=None;self.edit_revision='';self.editlabel.set('Ny tur')
+  self.edit_id=None;self.edit_distribution=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
    if k not in ['course','vehicle']:v.set('' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
  def save(self):
   try:
    d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id;d['trip']=trip_number(d['trip'])
+   if self.edit_distribution is not None:d['distribution']=self.edit_distribution
    if not self.edit_id and d['trip']>course_count(self.store,d['course']):raise ValueError('Denne turen er ikke aktivert på kurset.')
    validated=self.store.validate(d)
    if missing_fields(validated) and getattr(self,'edit_revision',''):
@@ -166,7 +181,7 @@ class App:
   if not ids:return
   self.open_trip(next(d for d in self.store.all(True) if d['id']==ids[0]))
  def open_trip(self,d):
-  self.edit_id=d['id'];self.edit_revision=''
+  self.edit_id=d['id'];self.edit_distribution=d.get('distribution');self.edit_revision=''
   if hasattr(self,'cloud_panel'):
    remote=self.cloud_panel.receiver.remote(d['id']);self.edit_revision=remote.get('revision','') if remote else ''
   for k,v in self.fields.items():v.set(trip_name(d['trip']) if k=='trip' else d.get(k,''))

@@ -7,7 +7,7 @@ import tkinter as tk
 DEFAULT_URL='https://otuemdgmymgognzghmnu.supabase.co'
 DEFAULT_API='sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu'
 
-FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed']
+FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','distribution']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
  if str(values.get('average_speed','')).strip() not in ['', '-']:values['average_speed']=float(values['average_speed'])

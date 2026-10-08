@@ -1,3 +1,5 @@
+1.9.0 / bygg 21 – Dev: distribusjon med Start, leveringsstopp «Rygget til rampe» og «Avbrutt» med grunn. Kursoppsettet angir 0–30 stopp, forventet totaltid og valgfrie stoppfrister fra start. Klokken inkluderer lasting, venting og pauser. Turloggen viser minutter mellom stopp, samlet fra start, avvik fra planen og avbrutte stopp. PC og klasserom har full stopptabell. Tidsplanen følger turen selv om kurset endres senere.
+
 1.8.1 / bygg 20 – Dev: påkrevd innlogging før tilgang til PC og Android. Registrering, resultater, menyer og lokal mobilserver åpnes først etter serverkontroll av aktiv brukerkonto. Lagret økt kontrolleres ved oppstart. Logg ut går tilbake til innlogging uten å slette lokale turer.
 
 1.8.0 · bygg 19 (dev)
