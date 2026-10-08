@@ -42,3 +42,10 @@ Windows-filer bygger bare Windows; filer under `android/` bygger bare Android. F
 
 ### Kursoppsett og sammenligning (dev)
 Admin velger kursnavn og 1–5 aktive turer via Kursoppsett på PC eller Administrer → Kurs → Kursoppsett på Android. Turene aktiveres fra 1 til valgt antall; eksisterende registreringer beholdes. Gamle kurs har fem aktive turer. Kursoppsettet hentes ved synkronisering og er tilgjengelig uten nett etterpå. Windows kan også ha lokale kursoppsett uten skykonto. Klasserommet viser turenes navn; Sammenlign turer velger hvilke registreringer som inngår i historikken, og Sammenlign fra på storskjermen velger startturen.
+
+## Skoler og avdelinger (dev 1.8.0)
+Vanlige brukere logger inn med e-post og passord. Prosjektadresse og publishable key er innebygd; service key ligger kun på serveren. Første oppstart åpner innlogging. Lokal lagring uten nett er fortsatt tilgjengelig.
+
+Under **Admin / lærere** kan admin opprette skoler, opprette avdelinger, endre navn og tildele en skole og valgfri avdeling når en bruker opprettes. Eksisterende brukere kan også tildeles skole/avdeling. Admin administrerer egen skole og nye skoler de selv oppretter. Ingen tilgang til andre skoler gis automatisk. Avdeling er tilhørighet innen skolen; kurs og klasserom deles på skolenivå.
+
+Tidligere turer beholdes i opprinnelig skole. Administratorer kan få ny avdeling, men flyttes ikke mellom skoler; opprett en ny administratorkonto i den nye skolen. Etter skolebytte må lokale data holdes separat: PC og Android stopper synkronisering ved endret skoletilknytning, slik at gamle utkast ikke sendes til ny skole. Bruk en separat PC-database/Android-installasjon for ny skole.

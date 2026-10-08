@@ -4,6 +4,9 @@ from pathlib import Path
 from tkinter import ttk,messagebox
 import tkinter as tk
 
+DEFAULT_URL='https://otuemdgmymgognzghmnu.supabase.co'
+DEFAULT_API='sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu'
+
 FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
@@ -174,20 +177,21 @@ class Receiver:
 
 class CloudPanel:
  def __init__(self,app,path):
-  self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False
-  f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Telefon / sky')
-  ttk.Label(f,text='Telefon ↔ sky ↔ klasserom',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
-  ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk skolens Supabase-prosjekt og din egen brukerkonto. Etter skoleaktivering hentes turene fra alle skolens lærere.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
-  self.fields={}
-  for i,(k,label) in enumerate([('url','Supabase Project URL'),('api','Publishable / anon key'),('email','E-post'),('password','Passord')],start=2):
+  self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False;self.account_label=''
+  f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Innlogging / sky');self.frame=f
+  ttk.Label(f,text='Logg inn i YSK Kjørestudio',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
+  ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk e-post og passord fra administratoren. Skole og avdeling følger kontoen automatisk.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
+  self.fields={'url':tk.StringVar(value=DEFAULT_URL),'api':tk.StringVar(value=DEFAULT_API)}
+  for i,(k,label) in enumerate([('email','E-post'),('password','Passord')],start=2):
    ttk.Label(f,text=label).grid(row=i,column=0,sticky='w',padx=(0,15),pady=10);v=tk.StringVar(value='https://otuemdgmymgognzghmnu.supabase.co' if k=='url' else 'sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu' if k=='api' else '');self.fields[k]=v;ttk.Entry(f,textvariable=v,width=65,show='•' if k=='password' else '').grid(row=i,column=1,sticky='ew')
-  ttk.Button(f,text='Logg inn og koble til',style='Accent.TButton',command=self.connect).grid(row=6,column=1,sticky='w',pady=15)
+  ttk.Button(f,text='Logg inn',style='Accent.TButton',command=self.connect).grid(row=6,column=1,sticky='w',pady=15)
   ttk.Button(f,text='Hent turer nå',command=self.sync).grid(row=7,column=1,sticky='w',pady=8)
   ttk.Button(f,text='Bruk telefonens versjoner ved konflikt',command=self.force).grid(row=7,column=0,sticky='w',pady=8)
   self.status=tk.StringVar(value='Ikke koblet til. Android-appen kan fortsatt lagre turer lokalt.');ttk.Label(f,textvariable=self.status,wraplength=850).grid(row=8,column=0,columnspan=2,sticky='w',pady=15)
-  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nOppsettsveiledning: cloud/OPPSETT.txt i pakken.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
+  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nSkole og avdeling tildeles av administrator.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
   try:
    cfg=self.receiver.load()
+   if not cfg:app.nb.select(f)
    if cfg:
     for k in ['url','api','email']:self.fields[k].set(cfg[k])
     self.status.set('Tilkoblet. Venter på første henting.');self.sync()
@@ -197,7 +201,11 @@ class CloudPanel:
   if self.busy:return
   self.busy=True;self.status.set('Kobler til …')
   def work():
-   try:self.queue.put(('ok',fn()))
+   try:
+    result=fn()
+    if self.receiver.load():
+     info=self.receiver.admin('me');self.account_label=(info.get('school') or {}).get('name','')+(' · '+info['division']['name'] if info.get('division') else '')
+    self.queue.put(('ok',result))
    except Exception as e:self.queue.put(('error',str(e)))
   threading.Thread(target=work,daemon=True).start()
  def connect(self):
@@ -220,7 +228,7 @@ class CloudPanel:
     if kind=='error':self.status.set('Venter: '+result);self.app.cloud_waiting=True
     else:
      n,errors,connected=result
-     self.status.set(('Hentet '+str(n)+' nye/endrede turer. Oppdatert '+time.strftime('%H:%M:%S') if connected else 'Ikke koblet til.')+ ('\n'+'\n'.join(errors[:6]) if errors else ''));
+     self.status.set(('Hentet '+str(n)+' nye/endrede turer. Oppdatert '+time.strftime('%H:%M:%S') if connected else 'Ikke koblet til.')+(' · '+self.account_label if connected and self.account_label else '')+ ('\n'+'\n'.join(errors[:6]) if errors else ''));
      self.app.cloud_waiting=not connected
      if connected:self.app.last_cloud_update=time.strftime('%H:%M:%S')
      self.app.refresh()

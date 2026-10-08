@@ -1,3 +1,4 @@
+import { managedSchools } from './schools.ts';
 const BUCKET='ysk-updates';
 const platformOK=p=>['android','windows'].includes(p);
 async function urlFor(server,base,path){const result=await server('/storage/v1/object/sign/'+BUCKET+'/'+path,'POST',{expiresIn:300});const url=result.signedURL||result.signedUrl;return url.startsWith('http')?url:base+'/storage/v1'+url;}
@@ -26,7 +27,8 @@ export async function updateAction(body,member,server,base,secret){
  if(member.role!=='admin')return {status:403,data:{message:'Bare admin kan styre oppdateringer.'}};
  if(body.action==='set_channel'){
   if(!['dev','stable'].includes(body.channel)||!/^[0-9a-f-]{36}$/i.test(String(body.user_id)))return {status:400,data:{message:'Ugyldig kanal eller bruker.'}};
-  const changed=await server('/rest/v1/ysk_memberships?user_id=eq.'+encodeURIComponent(body.user_id)+'&organization_id=eq.'+org,'PATCH',{update_channel:body.channel});
+  const ids=await managedSchools(member,server);
+  const changed=await server('/rest/v1/ysk_memberships?user_id=eq.'+encodeURIComponent(body.user_id)+'&organization_id=in.('+ids.map(encodeURIComponent).join(',')+')','PATCH',{update_channel:body.channel});
   return changed.length?{data:{message:'Oppdateringskanal endret til '+body.channel+'.'}}:{status:404,data:{message:'Brukeren finnes ikke i skolen.'}};
  }
  if(body.action==='release_list')return {data:{releases:await server('/rest/v1/ysk_releases?organization_id=eq.'+org+'&order=build.desc&limit=100'),channels:await server('/rest/v1/ysk_update_channels?organization_id=eq.'+org)}};

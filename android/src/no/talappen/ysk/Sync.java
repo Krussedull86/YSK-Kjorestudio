@@ -1,6 +1,7 @@
 package no.talappen.ysk;
 import android.content.*;import org.json.*;import java.net.*;import java.io.*;import java.util.*;
 public class Sync {
+ public static final String DEFAULT_URL="https://otuemdgmymgognzghmnu.supabase.co", DEFAULT_API="sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu";
  static class ApiFailure extends Exception {final int status;final String code;ApiFailure(int status,String message,String code){super(message);this.status=status;this.code=code;}}
  static JSONArray getRows(String url,String api,String token)throws Exception {
   HttpURLConnection h=(HttpURLConnection)new URL(url).openConnection();h.setConnectTimeout(15000);h.setReadTimeout(20000);h.setRequestProperty("apikey",api);h.setRequestProperty("Authorization","Bearer "+token);
@@ -26,7 +27,7 @@ public class Sync {
   url=endpoint(url);if(api.startsWith("sb_secret_")||api.trim().isEmpty())throw new Exception("Bruk publishable/anon key, aldri secret/service_role.");
   if(api.startsWith("eyJ")){try{String role=new JSONObject(new String(android.util.Base64.decode(api.split("\\.")[1],android.util.Base64.URL_SAFE),"UTF-8")).optString("role");if(!role.equals("anon"))throw new Exception("API-nøkkelen må være anon/publishable.");}catch(JSONException e){throw new Exception("Ugyldig API-nøkkel.");}}
   JSONObject b=new JSONObject().put("email",email.trim()).put("password",password);JSONObject session=request(url+"/auth/v1/token?grant_type=password",api,null,b);
-  JSONObject member=membership(url,api,session);if(member!=null)c.getSharedPreferences("form",0).edit().putString("teacher",member.getString("display_name")).apply();String owner=session.getJSONObject("user").getString("id");try(TripDb db=new TripDb(c)){db.bind(url+"|"+owner);}Secure.put(c,session.toString());c.getSharedPreferences("cloud",0).edit().putString("url",url).putString("api",api).putString("email",email.trim()).putString("owner",owner).commit();
+  JSONObject member=membership(url,api,session);if(member!=null)c.getSharedPreferences("form",0).edit().putString("teacher",member.getString("display_name")).apply();String owner=session.getJSONObject("user").getString("id");try(TripDb db=new TripDb(c)){db.bind(url+"|"+owner);if(member!=null)db.bindSchool(member.getString("organization_id"));}Secure.put(c,session.toString());c.getSharedPreferences("cloud",0).edit().putString("url",url).putString("api",api).putString("email",email.trim()).putString("owner",owner).commit();
  }
  static JSONObject session(Context c,String url,String api)throws Exception{
   String raw=Secure.get(c);if(raw.isEmpty())throw new Exception("Koble til skykonto først.");JSONObject s=new JSONObject(raw);
@@ -42,7 +43,7 @@ public class Sync {
   Context c=context.getApplicationContext();try(TripDb db=new TripDb(c)){
    List<JSONObject> rows=db.rows(true);
    SharedPreferences p=c.getSharedPreferences("cloud",0);String url=p.getString("url",""),api=p.getString("api","");if(url.isEmpty())return "Lagret på telefonen. Koble til sky under Innstillinger for å sende.";
-   JSONObject s=session(c,url,api);JSONObject member=membership(url,api,s);String token=s.getString("access_token"),owner=s.getJSONObject("user").getString("id");db.bind(url+"|"+owner);int sent=0,failed=0;
+   JSONObject s=session(c,url,api);JSONObject member=membership(url,api,s);JSONObject account=request(url+"/functions/v1/ysk-admin",api,s.getString("access_token"),new JSONObject().put("action","me"));c.getSharedPreferences("cloud",0).edit().putString("account",account.toString()).apply();String token=s.getString("access_token"),owner=s.getJSONObject("user").getString("id");db.bind(url+"|"+owner);if(member!=null)db.bindSchool(member.getString("organization_id"));int sent=0,failed=0;
    if(member!=null){JSONArray courses=request(url+"/functions/v1/ysk-admin",api,token,new JSONObject().put("action","course_setup_list")).getJSONArray("rows");c.getSharedPreferences("cloud",0).edit().putString("course_setup",courses.toString()).commit();}
    // Pull sent rows first, so upgraded databases acquire their cloud revision.
    List<JSONObject> remoteRows=ownRows(url,api,token,owner);for(JSONObject r:remoteRows){try{db.remote(r,false);}catch(Exception ignored){}}

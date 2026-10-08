@@ -1,3 +1,9 @@
+1.8.0 · bygg 19 (dev)
+- Skoler og avdelinger: opprett, endre navn og tildel brukere i adminpanelet på PC og Android.
+- Innlogging med e-post og passord; appen håndterer offentlig API-nøkkel og adresse.
+- Skole og avdeling vises på innlogget konto. Avdelinger deler kurs innen skolen.
+- Tilgang begrenses til egne/administrerte skoler. Gamle turer flyttes ikke ved skolebytte.
+
 1.7.0 / bygg 18 – Dev: kursoppsett med 1–5 aktive turer. Optimaltur 1–3 og Transportoppdrag 1 (distribusjon) / 2 (langtur). Kursoppsett deles via skyen. Navn i registrering og klasserom. Velg hvilke turer som inngår i sammenligningen og hvilken tur forbedring måles fra.
 
 1.6.4 / bygg 16 – Android dev-utgave etter publisering av Windows og Android til stabil. Android får korrekt versjonsnummer fra byggeoppsettet. Kun Android bygges og publiseres.
