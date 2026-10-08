@@ -1,3 +1,8 @@
+1.5.1 · bygg 9 · dev · 2026-10-08
+- Tidtaker i telefonens nedtrekkspanel med Pause / Gjenoppta / Stopp.
+- Stopp oppdaterer turskjema og utkast uten å åpne appen.
+- Android ber om varslingstillatelse når tidtaking startes.
+
 1.5.0 · bygg 8 · dev · 2026-10-08
 - Kompakt menylinje, rullbar status og ingen fast bunn.
 - Færre valgknapper og tydelige grupper i registreringen.

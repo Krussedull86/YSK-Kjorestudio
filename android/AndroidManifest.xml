@@ -1,14 +1,18 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="no.talappen.ysk" android:versionCode="8" android:versionName="1.5.0">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="no.talappen.ysk" android:versionCode="9" android:versionName="1.5.1">
  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>
  <uses-permission android:name="android.permission.INTERNET"/>
  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+ <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+ <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+ <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
  <application android:label="YSK Kjørestudio" android:theme="@style/AppTheme" android:allowBackup="false" android:usesCleartextTraffic="false" android:icon="@drawable/ic_launcher">
   <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
   <provider android:name=".UpdateProvider" android:authorities="no.talappen.ysk.updates" android:exported="false" android:grantUriPermissions="true"/>
+  <service android:name=".TimerService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started driving lesson stopwatch with pause, resume and stop notification controls"/></service>
   <service android:name=".SyncJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
  </application>
 </manifest>
