@@ -1,3 +1,8 @@
+1.5.3 · bygg 11 · dev · 2026-10-08
+- Høy prioritet som standard for tidtakervarsel; lyd og vibrasjon er av.
+- Knapp i innstillinger åpner Androids varselvalg.
+- Brukerens egne prioriteringsvalg beholdes på Android 10 og nyere.
+
 1.5.2 · bygg 10 · dev · 2026-10-08
 - Rød + Unødig stans-knapp i appen og 🔴 + Stans i tidtakervarselet.
 - Antall stopp kan alltid skrives manuelt og redigeres senere.
