@@ -81,7 +81,7 @@ class App:
    elif k in ['driver','course','vehicle']:
     widget=ttk.Combobox(register,textvariable=v,width=30);self.catalog_boxes[k]=widget
    else:widget=ttk.Entry(register,textvariable=v,width=32)
-   if k=='trip':self.trip_box=widget
+   if k=='trip':self.trip_box=widget;widget.configure(width=40)
    widget.grid(row=row,column=col+1,sticky='ew',padx=8,pady=6)
   self.fields['course'].trace_add('write',lambda *a:self.update_trip_choices())
   ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=12,column=1,pady=6)
@@ -185,6 +185,7 @@ class App:
    self.store.backup(DATA/('før_sletting_'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'.db'));self.store.delete(ids[0]);self.refresh()
  def filtered(self,rows):return [d for d in rows if (self.compare_trips is None or d['trip'] in self.compare_trips) and all(v.get()=='Alle' or str(d[k])==str(trip_number(v.get()) if k=='trip' else v.get()) for k,(v,box) in self.filters.items())]
  def refresh(self):
+  self.update_trip_choices()
   rows=self.store.all();self.rows=rows;self.all_rows=self.store.all(True)
   unfinished=sum(bool(missing_fields(d)) for d in self.all_rows)
   self.trip_warning.set(f'● {unfinished} uferdige turer – åpne dem for å fullføre. Bruk - for bevisst utelatte felt.' if unfinished else '')
