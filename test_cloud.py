@@ -9,6 +9,22 @@ class CloudTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name)/'ysk.db');self.receiver=Receiver(self.store,Path(self.tmp.name)/'session');self.id=str(uuid.uuid4());self.d=dict(id=self.id,driver='Anne',course='YSK',vehicle='C',trip=1,minutes=60,km=40,liters=12,stops=1,notes='',**{k:'Bra' for k in QUAL})
  def tearDown(self):self.tmp.cleanup()
  def row(self,d=None):return {'id':self.id,'payload':d or self.d}
+ def test_explicit_omissions_import_retry_and_finish(self):
+  from core import ranking,changes
+  for key in ['minutes','km','liters','stops',*QUAL,'average_speed']:
+   omitted=self.d|{key:'-'}
+   self.assertEqual(self.receiver.import_rows([self.row(omitted)],force=True),(1,[]))
+   self.assertEqual(self.receiver.import_rows([self.row(omitted)]),(0,[]))
+   saved=self.store.all(True)[0];self.assertEqual(saved[key],'-')
+   self.assertEqual(self.store.all(),[])
+   self.assertEqual(ranking([saved],self.store.settings()),[])
+   self.assertEqual(changes([saved]),[])
+  self.assertEqual(self.receiver.import_rows([self.row(self.d)],force=True),(1,[]))
+  self.assertEqual(len(self.store.all()),1)
+  self.assertNotEqual(fingerprint(self.d|{'stops':'-'}),fingerprint(self.d|{'stops':0}))
+ def test_invalid_values_not_treated_as_omitted(self):
+  for value in ['', 'abc', -1, float('nan')]:
+   with self.assertRaises((ValueError,TypeError)):self.store.save(self.d|{'liters':value})
  def test_import_and_retry(self):
   self.assertEqual(self.receiver.import_rows([self.row()]),(1,[]));self.assertEqual(self.receiver.import_rows([self.row()]),(0,[]));self.assertEqual(len(self.store.all()),1)
  def test_changed_remote(self):

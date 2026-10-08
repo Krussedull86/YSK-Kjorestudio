@@ -1,3 +1,12 @@
+1.6.0 / bygg 12 (dev)
+- Lagre uferdige turer lokalt. Mine turer viser rød prikk, antall og liste over manglende felt.
+- Tomt betyr mangler. - betyr bevisst utelatt; egen - knapp ved målinger og vurderinger.
+- Ingen forhåndsutfylt Middels-vurdering for nye turer.
+- Uferdige turer sendes først når alle obligatoriske felt er utfylt eller markert -.
+- Gjennomsnittsfart kan være tom for automatisk beregning; notater er valgfrie.
+- PC og sky støtter - uten nullverdier. Turen vises i PC-oversikten uten poeng når rangeringen mangler grunnlag.
+- Stoppeklokken må stoppes før turen lagres. Stable endres ikke.
+
 1.5.3 · bygg 11 · dev · 2026-10-08
 - Høy prioritet som standard for tidtakervarsel; lyd og vibrasjon er av.
 - Knapp i innstillinger åpner Androids varselvalg.

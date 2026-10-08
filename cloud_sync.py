@@ -7,9 +7,9 @@ import tkinter as tk
 FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
- if str(values.get('average_speed','')).strip():values['average_speed']=float(values['average_speed'])
+ if str(values.get('average_speed','')).strip() not in ['', '-']:values['average_speed']=float(values['average_speed'])
  for k in ['trip','minutes','km','liters','stops']:
-  if k in values:values[k]=float(values[k])
+  if k in values and str(values[k]).strip() not in ['', '-']:values[k]=float(values[k])
  return hashlib.sha256(json.dumps(values,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
 def endpoint(url):
  p=urllib.parse.urlsplit(url.strip())

@@ -24,6 +24,8 @@ class Store:
   with self.conn() as c:c.execute('INSERT OR REPLACE INTO settings VALUES (1,?)',(json.dumps(w),))
  def validate(self,d):
   d=dict(d)
+  omitted={k for k in ['minutes','km','liters','stops',*QUAL,'average_speed','date','start_time'] if d.get(k)=='-'}
+  for k in omitted:d[k]='Middel' if k in QUAL else '' if k in ['date','start_time','average_speed'] else 1
   for k in ['driver','course','vehicle']:
    d[k]=str(d.get(k,'')).strip()
    if not d[k] or len(d[k])>100: raise ValueError('Fyll inn sjåfør, kurs og kjøretøy (maks 100 tegn).')
@@ -56,6 +58,7 @@ class Store:
   d['notes']=str(d.get('notes',''))[:2000]
   d['updated']=datetime.datetime.now().isoformat(timespec='seconds')
   d['id']=str(d.get('id') or uuid.uuid4())
+  for k in omitted:d[k]='-'
   return d
  def save(self,d,connection=None):
   d=self.validate(d)
@@ -64,18 +67,22 @@ class Store:
    if old and old[0]!=d['id']:raise ValueError('Denne turen finnes allerede. Åpne den for å endre.')
    c.execute('INSERT INTO trips VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET driver=excluded.driver,course=excluded.course,vehicle=excluded.vehicle,trip=excluded.trip,payload=excluded.payload',(d['id'],d['driver'],d['course'],d['vehicle'],d['trip'],json.dumps(d,ensure_ascii=False)))
   return d
- def all(self):
-  with self.conn() as c:return [json.loads(r[0]) for r in c.execute('SELECT payload FROM trips ORDER BY course,vehicle,driver,trip')]
+ def all(self,include_unscored=False):
+  with self.conn() as c:rows=[json.loads(r[0]) for r in c.execute('SELECT payload FROM trips ORDER BY course,vehicle,driver,trip')]
+  return rows if include_unscored else [d for d in rows if scorable(d)]
  def delete(self,id):
   with self.conn() as c:c.execute('DELETE FROM trips WHERE id=?',(id,))
  def backup(self,path):
   with self.conn() as src,contextlib.closing(sqlite3.connect(path)) as dst:
    with dst:src.backup(dst)
+def scorable(d):
+ return all(isinstance(d.get(k),(int,float)) and math.isfinite(d[k]) for k in ['minutes','km','liters','stops']) and d['minutes']>0 and d['km']>0 and d.get('average_speed')!='-' and all(d.get(k) in ['Bra','Middel','Svak'] for k in QUAL)
 def metrics(d):return {'tid':d['minutes']/d['km'],'forbruk':d['liters']/d['km'],'stopp':d['stops']/d['km'],'forbruk10':10*d['liters']/d['km'],'fart':d.get('average_speed',60*d['km']/d['minutes'])}
 def ranking(rows,w):
  # Compute comparison ranges once per course / vehicle / trip.
  groups={};measured=[]
  for d in rows:
+  if not scorable(d):continue
   m=metrics(d);group=(d['course'],d['vehicle'],d['trip']);measured.append((d,m,group))
   ranges=groups.setdefault(group,{k:[m[k],m[k]] for k in ['tid','forbruk','stopp']})
   for k in ranges:ranges[k][0]=min(ranges[k][0],m[k]);ranges[k][1]=max(ranges[k][1],m[k])
@@ -87,7 +94,8 @@ def ranking(rows,w):
  return sorted(result,key=lambda d:(d['course'],d['vehicle'],d['trip'],-d['score'],d['driver']))
 def changes(rows):
  groups={}
- for d in rows:groups.setdefault((d['course'],d['vehicle'],d['driver']),[]).append(d)
+ for d in rows:
+  if scorable(d):groups.setdefault((d['course'],d['vehicle'],d['driver']),[]).append(d)
  out=[]
  for key,ds in groups.items():
   ds=sorted(ds,key=lambda d:d['trip']); a=ds[0]; b=ds[-1]; ma,mb=metrics(a),metrics(b)

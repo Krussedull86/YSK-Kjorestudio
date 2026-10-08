@@ -104,7 +104,7 @@ class App:
   for i,k in enumerate(WEIGHTS):
    ttk.Label(settings,text=k.capitalize()).grid(row=i,column=0,sticky='w',padx=8,pady=6);v=tk.StringVar(value=str(self.store.settings()[k]));self.weights[k]=v;ttk.Entry(settings,textvariable=v,width=10).grid(row=i,column=1,padx=8)
   ttk.Button(settings,text='Lagre vekter',command=self.save_weights).grid(row=8,column=1,pady=12)
-  explanation='Bra = 100, Middel = 50, Svak = 0.\nTallkriterier: lavest verdi i sammenligningsgruppen = 100, høyest = 0.\nLik verdi for alle = 100. Poeng er relativ rangering, ikke en faglig godkjenning.\nSamlet poeng er vektet gjennomsnitt. Tid må aldri belønne utrygg kjøring.\nGjennomsnittsfart kan legges inn eller beregnes; forbruk per 10 km = 10 × liter / km; stopp normaliseres per km.\nFartsøkning vurderes med Bra, Middels eller Svak.\nAndroid-appen lagrer lokalt og sender via Supabase.\nData: '+str(DATA)
+  explanation='Bra = 100, Middel = 50, Svak = 0.\nTallkriterier: lavest verdi i sammenligningsgruppen = 100, høyest = 0.\nLik verdi for alle = 100. Poeng er relativ rangering, ikke en faglig godkjenning.\n- = bevisst utelatt. Slike turer vises uten samlet poeng; ingen manglende verdi regnes som null.\nSamlet poeng er vektet gjennomsnitt. Tid må aldri belønne utrygg kjøring.\nGjennomsnittsfart kan legges inn eller beregnes; forbruk per 10 km = 10 × liter / km; stopp normaliseres per km.\nFartsøkning vurderes med Bra, Middels eller Svak.\nAndroid-appen lagrer lokalt og sender via Supabase.\nData: '+str(DATA)
   ttk.Label(settings,text=explanation,justify='left').grid(row=0,column=2,rowspan=10,padx=30,sticky='nw')
   root.protocol('WM_DELETE_WINDOW',self.close);self.refresh();root.after(2000,self.poll)
  def tree(self,parent,cols):
@@ -126,7 +126,7 @@ class App:
  def edit(self):
   ids=self.table.selection()
   if not ids:return
-  self.open_trip(next(d for d in self.store.all() if d['id']==ids[0]))
+  self.open_trip(next(d for d in self.store.all(True) if d['id']==ids[0]))
  def open_trip(self,d):
   self.edit_id=d['id'];self.edit_revision=''
   if hasattr(self,'cloud_panel'):
@@ -147,12 +147,15 @@ class App:
  def filtered(self,rows):return [d for d in rows if all(v.get()=='Alle' or str(d[k])==v.get() for k,(v,box) in self.filters.items())]
  def refresh(self):
   rows=self.store.all();self.rows=rows
-  for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in rows},key=str.casefold)
+  for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in self.store.all(True)},key=str.casefold)
   for k,(v,box) in self.filters.items():
-   values=['Alle']+sorted({str(d[k]) for d in rows});box['values']=values
+   values=['Alle']+sorted({str(d[k]) for d in self.store.all(True)});box['values']=values
    if v.get() not in values:v.set('Alle')
   selected=self.table.selection();self.table.delete(*self.table.get_children());self.ranked=self.filtered(ranking(rows,self.store.settings()))
   for d in self.ranked:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],d['trip'],d['score'],d['minutes'],f"{d['tid']:.3f}",f"{d['forbruk10']:.2f}",f"{d['fart']:.1f}",int(d['stops']),*[d[k] for k in QUAL]])
+  scored_ids={d['id'] for d in rows}
+  for d in self.filtered(self.store.all(True)):
+   if d['id'] not in scored_ids:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],d['trip'],'—',d['minutes'],'—','—','—',d['stops'],*[d[k] for k in QUAL]])
   if selected and self.table.exists(selected[0]):self.table.selection_set(selected)
   psel=self.progress.selection();self.progress.delete(*self.progress.get_children());self.change_rows=changes(rows)
   for i,d in enumerate(self.change_rows):

@@ -67,6 +67,10 @@ jobs:
         run: |
           javac -d timer-test android/src/no/talappen/ysk/StopCounter.java android/tests/StopCounterTest.java
           java -cp timer-test StopCounterTest
+      - name: Test incomplete and omitted fields
+        run: |
+          javac -encoding UTF-8 -d timer-test android/src/no/talappen/ysk/TripCompletion.java android/tests/TripCompletionTest.java
+          java -cp timer-test TripCompletionTest
       - run: python android/build_android.py
       - uses: actions/upload-artifact@v4
         with:
