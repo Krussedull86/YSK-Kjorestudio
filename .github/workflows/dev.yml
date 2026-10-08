@@ -63,6 +63,10 @@ jobs:
           mkdir -p timer-test
           javac -d timer-test android/src/no/talappen/ysk/TripTimer.java android/tests/TripTimerTest.java
           java -cp timer-test TripTimerTest
+      - name: Test stop counter
+        run: |
+          javac -d timer-test android/src/no/talappen/ysk/StopCounter.java android/tests/StopCounterTest.java
+          java -cp timer-test StopCounterTest
       - run: python android/build_android.py
       - uses: actions/upload-artifact@v4
         with:

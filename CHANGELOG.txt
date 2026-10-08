@@ -1,3 +1,8 @@
+1.5.2 · bygg 10 · dev · 2026-10-08
+- Rød + Unødig stans-knapp i appen og 🔴 + Stans i tidtakervarselet.
+- Antall stopp kan alltid skrives manuelt og redigeres senere.
+- Varsel og skjema bruker samme utkast, med vern mot gamle skjermverdier.
+
 1.5.1 · bygg 9 · dev · 2026-10-08
 - Tidtaker i telefonens nedtrekkspanel med Pause / Gjenoppta / Stopp.
 - Stopp oppdaterer turskjema og utkast uten å åpne appen.
