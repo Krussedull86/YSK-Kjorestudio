@@ -54,3 +54,12 @@ class LoginTests(unittest.TestCase):
    with patch.object(receiver,'load',return_value=cfg),patch('cloud_sync.request',side_effect=OSError('offline')) as request:
     receiver.logout();self.assertFalse(path.exists());self.assertIn('scope=local',request.call_args.args[0])
    with store.conn() as c:self.assertEqual(c.execute('select value from saved_draft').fetchone()[0],'local draft')
+
+class ReleaseNotesTests(unittest.TestCase):
+ def test_old_history_cannot_overflow_new_release(self):
+  from scripts.publish_dev import release_notes
+  self.assertEqual(release_notes('Current login changes\n\n'+'Old release history'*500),'Current login changes')
+ def test_latest_release_limit_is_checked(self):
+  from scripts.publish_dev import release_notes
+  for text in ['', 'x'*5001]:
+   with self.assertRaises(ValueError):release_notes(text)
