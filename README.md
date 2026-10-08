@@ -22,7 +22,7 @@ Lærere endrer egne turer. Admin administrerer alle skolens turer og kurs/biler.
 
 `.github/workflows/dev.yml` er klargjort for Windows- og Android-bygg, tester og dev-publisering. Admin velger testere i brukerlisten. Stable fremmes uttrykkelig i den innloggede portalen med samme releasefiler. Android krever bekreftelse på installasjon.
 
-GitHub-repoet er offentlig. GitHub Actions bygger og signerer APK og EXE automatisk ved push til dev. Android-nøkkelen og passordene er krypterte Actions-secrets. Versjon 1.3.2 bygg 6 er publisert til Supabase dev-kanalen og kontrollert med SHA-256. Alle 35 tester består på Windows. Stable er urørt. Portalen er ikke hostet ennå.
+GitHub-repoet er offentlig. GitHub Actions bygger og signerer APK og EXE automatisk ved push til dev. Android-nøkkelen og passordene er krypterte Actions-secrets. Versjon 1.5.0 bygg 8 er publisert til Supabase dev-kanalen og kontrollert med SHA-256. Alle 38 PC-tester og tidtakerens Java-tester består. Stable er urørt. Portalen er ikke hostet ennå.
 
 
 ## Utvikling

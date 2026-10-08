@@ -1,0 +1,8 @@
+YSK 1.5.0 · BYGG 8 · DEV · 2026-10-08
+GitHub Actions: https://github.com/Krussedull86/YSK-Kjorestudio/actions/runs/37734829159
+38 Windows-tester bestått. Android bygg, signering, tilgangstester og klokketester bestått.
+APK har samme signeringssertifikat som tidligere og kan installeres over eksisterende app.
+Android SHA-256: 50e974cf9fba8648768e6c1aea6fe9a1740418b2158ed9355e21eb946d1181ad
+EXE SHA-256: 41352495c1e6ab06d94efbd12f5fb0d40f3ef55bbdbe3feff92ba12095bee9c1
+Publisert til dev; stable er ikke fremmet.
+Mobiloppsettet er kompilert, men ikke testet på en fysisk telefon i dette miljøet.
