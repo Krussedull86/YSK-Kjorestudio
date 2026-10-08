@@ -146,7 +146,7 @@ class App:
    self.store.backup(DATA/('før_sletting_'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'.db'));self.store.delete(ids[0]);self.refresh()
  def filtered(self,rows):return [d for d in rows if all(v.get()=='Alle' or str(d[k])==v.get() for k,(v,box) in self.filters.items())]
  def refresh(self):
-  rows=self.store.all();self.rows=rows
+  rows=self.store.all();self.rows=rows;self.all_rows=self.store.all(True)
   for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in self.store.all(True)},key=str.casefold)
   for k,(v,box) in self.filters.items():
    values=['Alle']+sorted({str(d[k]) for d in self.store.all(True)});box['values']=values
@@ -215,7 +215,7 @@ class App:
     messagebox.showinfo('Eksport','CSV-filen er lagret.')
    except Exception as e:messagebox.showerror('Feil',str(e))
  def poll(self):
-  if self.store.all()!=self.rows:self.refresh()
+  if self.store.all(True)!=self.all_rows:self.refresh()
   self.root.after(2000,self.poll)
  def close(self):
   if hasattr(self,'cloud_panel'):self.cloud_panel.closed=True

@@ -62,7 +62,7 @@ class ManagementPanel:
   elif item.get('deleted_at'):messagebox.showinfo('Papirkurv','Gjenopprett turen før du redigerer den.')
   else:
    # The selected cloud version is the starting point for this explicit edit.
-   local=next((r for r in self.app.store.all() if r['id']==item['id']),None)
+   local=next((r for r in self.app.store.all(True) if r['id']==item['id']),None)
    if local and fingerprint(local)!=fingerprint(item['payload']):self.app.store.backup(self.receiver.path.parent/('før_skyredigering_'+time.strftime('%Y%m%d_%H%M%S')+'.db'))
    self.receiver.import_rows([item],force=True);self.app.refresh();self.app.open_trip(item['payload'])
    self.app.edit_revision=item['revision']

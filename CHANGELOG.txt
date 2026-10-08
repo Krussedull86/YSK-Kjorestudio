@@ -1,3 +1,7 @@
+1.6.1 / bygg 13 (dev)
+- Slett aldri synkroniserte utkast direkte på telefonen, uten skyfeil.
+- PC-oversikten oppdateres også når bare utelatte målinger endres.
+
 1.6.0 / bygg 12 (dev)
 - Lagre uferdige turer lokalt. Mine turer viser rød prikk, antall og liste over manglende felt.
 - Tomt betyr mangler. - betyr bevisst utelatt; egen - knapp ved målinger og vurderinger.
