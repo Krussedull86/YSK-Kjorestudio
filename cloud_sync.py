@@ -117,7 +117,10 @@ class Receiver:
    page=self.admin('trip_list',offset=offset)['rows'];rows.extend(page)
    if len(page)<500:return rows
  def save_trip(self,d,expected_revision=''):
-  result=self.admin('trip_save',payload=self.store.validate(d),expected_revision=expected_revision)
+  from core import missing_fields
+  validated=self.store.validate(d)
+  if missing_fields(validated):raise ValueError('Fullfør feltene eller bruk - før sending til skyen.')
+  result=self.admin('trip_save',payload=validated,expected_revision=expected_revision)
   self.import_rows([result['row']],force=True);return result
  def import_rows(self,rows,force=False):
   imported=0;conflicts=[]

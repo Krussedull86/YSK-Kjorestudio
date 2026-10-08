@@ -54,8 +54,8 @@ def classroom_class(Base):
     for widget in register.grid_slaves(row=row,column=col):widget.destroy()
     group=tk.Frame(register,bg=BG);group.grid(row=row,column=col,sticky='ew',padx=8,pady=8)
     var=self.fields[k];buttons=[]
-    for value,color in [('Bra',TEAL),('Middel',GOLD),('Svak','#bb414e')]:
-     b=tk.Button(group,text='Middels' if value=='Middel' else value,relief='flat',font=('Segoe UI',11,'bold'),padx=12,pady=10,command=lambda v=var,value=value:v.set(value));b.pack(side='left',padx=(0,5));buttons.append((b,value,color))
+    for value,color in [('Bra',TEAL),('Middel',GOLD),('Svak','#bb414e'),('-',MUTED),('',MUTED)]:
+     b=tk.Button(group,text='Middels' if value=='Middel' else 'Tøm' if value=='' else value,relief='flat',font=('Segoe UI',11,'bold'),padx=12,pady=10,command=lambda v=var,value=value:v.set(value));b.pack(side='left',padx=(0,5));buttons.append((b,value,color))
     def update(*args,var=var,buttons=buttons):
      for b,value,color in buttons:b.configure(bg=color if var.get()==value else EDGE,fg='white' if var.get()==value else MUTED)
     var.trace_add('write',update);update()

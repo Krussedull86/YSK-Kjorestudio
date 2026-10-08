@@ -2,6 +2,9 @@ import sqlite3, json, math, uuid, datetime, contextlib
 from pathlib import Path
 QUAL = ['trafikksikkerhet','avpassing','økning','komfort']
 WEIGHTS = {'tid':10,'forbruk':30,'stopp':10,'trafikksikkerhet':25,'avpassing':10,'økning':5,'komfort':10}
+COMPLETION_KEYS = ['driver','course','vehicle','minutes','km','liters','stops',*QUAL,'date','start_time','teacher']
+def missing_fields(d):
+ return [k for k in COMPLETION_KEYS if d.get(k) is None or not str(d[k]).strip()]
 class Store:
  def __init__(self,path):
   self.path=str(path); Path(path).parent.mkdir(parents=True,exist_ok=True)
@@ -24,8 +27,10 @@ class Store:
   with self.conn() as c:c.execute('INSERT OR REPLACE INTO settings VALUES (1,?)',(json.dumps(w),))
  def validate(self,d):
   d=dict(d)
-  omitted={k for k in ['minutes','km','liters','stops',*QUAL,'average_speed','date','start_time'] if d.get(k)=='-'}
-  for k in omitted:d[k]='Middel' if k in QUAL else '' if k in ['date','start_time','average_speed'] else 1
+  missing=set(missing_fields(d))
+  omitted={k for k in ['minutes','km','liters','stops',*QUAL,'average_speed','date','start_time'] if str(d.get(k,'')).strip()=='-'}
+  placeholders=(missing|omitted)-{'driver','course','vehicle','teacher'}
+  for k in placeholders:d[k]='Middel' if k in QUAL else '' if k in ['date','start_time','average_speed'] else 1
   for k in ['driver','course','vehicle']:
    d[k]=str(d.get(k,'')).strip()
    if not d[k] or len(d[k])>100: raise ValueError('Fyll inn sjåfør, kurs og kjøretøy (maks 100 tegn).')
@@ -58,7 +63,8 @@ class Store:
   d['notes']=str(d.get('notes',''))[:2000]
   d['updated']=datetime.datetime.now().isoformat(timespec='seconds')
   d['id']=str(d.get('id') or uuid.uuid4())
-  for k in omitted:d[k]='-'
+  for k in placeholders:d[k]='-' if k in omitted else ''
+  d['completion']='incomplete' if missing else 'complete'
   return d
  def save(self,d,connection=None):
   d=self.validate(d)
@@ -76,7 +82,7 @@ class Store:
   with self.conn() as src,contextlib.closing(sqlite3.connect(path)) as dst:
    with dst:src.backup(dst)
 def scorable(d):
- return all(isinstance(d.get(k),(int,float)) and math.isfinite(d[k]) for k in ['minutes','km','liters','stops']) and d['minutes']>0 and d['km']>0 and d.get('average_speed')!='-' and all(d.get(k) in ['Bra','Middel','Svak'] for k in QUAL)
+ return d.get('completion')!='incomplete' and all(isinstance(d.get(k),(int,float)) and math.isfinite(d[k]) for k in ['minutes','km','liters','stops']) and d['minutes']>0 and d['km']>0 and d.get('average_speed')!='-' and all(d.get(k) in ['Bra','Middel','Svak'] for k in QUAL)
 def metrics(d):return {'tid':d['minutes']/d['km'],'forbruk':d['liters']/d['km'],'stopp':d['stops']/d['km'],'forbruk10':10*d['liters']/d['km'],'fart':d.get('average_speed',60*d['km']/d['minutes'])}
 def ranking(rows,w):
  # Compute comparison ranges once per course / vehicle / trip.

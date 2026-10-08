@@ -3,7 +3,7 @@ from tkinter import ttk,messagebox,filedialog
 import os,sys,socket,secrets,threading,json,csv,ctypes,datetime
 from pathlib import Path
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
-from core import Store,QUAL,WEIGHTS,metrics,ranking,changes
+from core import Store,QUAL,WEIGHTS,metrics,ranking,changes,missing_fields
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))
 DATA=Path(os.getenv('LOCALAPPDATA',Path.home()))/('YSK_Kjorestudio_Demo' if '--demo' in sys.argv else 'YSK_Kjorestudio')
 
@@ -73,10 +73,10 @@ class App:
   for i,(k,label) in enumerate(labels):
    col=0 if i<9 else 2;row=i if i<9 else i-9
    ttk.Label(register,text=label).grid(row=row,column=col,sticky='w',padx=8,pady=6)
-   v=tk.StringVar(value='Middel' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
+   v=tk.StringVar(value='' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
    self.fields[k]=v
    if k in QUAL:self.rating_positions[k]=(row,col+1)
-   if k in QUAL or k=='trip':widget=ttk.Combobox(register,textvariable=v,values=['Bra','Middel','Svak'] if k in QUAL else [1,2,3,4,5],state='readonly',width=24)
+   if k in QUAL or k=='trip':widget=ttk.Combobox(register,textvariable=v,values=['','Bra','Middel','Svak','-'] if k in QUAL else [1,2,3,4,5],state='readonly',width=24)
    elif k in ['driver','course','vehicle']:
     widget=ttk.Combobox(register,textvariable=v,width=30);self.catalog_boxes[k]=widget
    else:widget=ttk.Entry(register,textvariable=v,width=32)
@@ -95,6 +95,8 @@ class App:
    ttk.Label(filters,text=label).pack(side='left',padx=4);v=tk.StringVar(value='Alle');box=ttk.Combobox(filters,textvariable=v,width=19,state='readonly');box.pack(side='left',padx=4);box.bind('<<ComboboxSelected>>',lambda e:self.refresh());self.filters[k]=(v,box)
   ttk.Button(filters,text='Rediger valgt',command=self.edit).pack(side='right');ttk.Button(filters,text='Slett valgt',command=self.delete).pack(side='right',padx=8)
   self.table=self.tree(overview,['Sjåfør','Kurs','Kjøretøy','Tur','Poeng','Tid min','min/km','L/10 km','km/t','Stopp','Trafikksikkerhet','Fartsavpassing','Fartsøkning','Komfort'])
+  self.table.tag_configure('incomplete',foreground='#d22837')
+  self.trip_warning=tk.StringVar();ttk.Label(overview,textvariable=self.trip_warning,foreground='#d22837').pack(fill='x',pady=6)
   self.table.bind('<Double-1>',lambda e:self.edit())
   ttk.Label(overview,text='Poeng gjelder samme kurs, kjøretøygruppe og turnummer. Bruk sammenlignbare ruter, last og forhold. Fart gir ingen poeng.').pack(fill='x',pady=8)
   self.progress=self.tree(progress,['Sjåfør','Kurs','Kjøretøy','Fra → til','Δ min/km','Δ L/10 km','Forbruk %','Δ km/t','Δ stopp/km','Trafikksikkerhet','Fartsavpassing','Fartsøkning','Komfort'])
@@ -104,7 +106,7 @@ class App:
   for i,k in enumerate(WEIGHTS):
    ttk.Label(settings,text=k.capitalize()).grid(row=i,column=0,sticky='w',padx=8,pady=6);v=tk.StringVar(value=str(self.store.settings()[k]));self.weights[k]=v;ttk.Entry(settings,textvariable=v,width=10).grid(row=i,column=1,padx=8)
   ttk.Button(settings,text='Lagre vekter',command=self.save_weights).grid(row=8,column=1,pady=12)
-  explanation='Bra = 100, Middel = 50, Svak = 0.\nTallkriterier: lavest verdi i sammenligningsgruppen = 100, høyest = 0.\nLik verdi for alle = 100. Poeng er relativ rangering, ikke en faglig godkjenning.\n- = bevisst utelatt. Slike turer vises uten samlet poeng; ingen manglende verdi regnes som null.\nSamlet poeng er vektet gjennomsnitt. Tid må aldri belønne utrygg kjøring.\nGjennomsnittsfart kan legges inn eller beregnes; forbruk per 10 km = 10 × liter / km; stopp normaliseres per km.\nFartsøkning vurderes med Bra, Middels eller Svak.\nAndroid-appen lagrer lokalt og sender via Supabase.\nData: '+str(DATA)
+  explanation='Bra = 100, Middel = 50, Svak = 0.\nTallkriterier: lavest verdi i sammenligningsgruppen = 100, høyest = 0.\nLik verdi for alle = 100. Poeng er relativ rangering, ikke en faglig godkjenning.\nTomme felt = uferdig tur, lagres lokalt med rød prikk.\n- = bevisst utelatt. Slike turer vises uten samlet poeng; ingen manglende verdi regnes som null.\nSamlet poeng er vektet gjennomsnitt. Tid må aldri belønne utrygg kjøring.\nGjennomsnittsfart kan legges inn eller beregnes; forbruk per 10 km = 10 × liter / km; stopp normaliseres per km.\nFartsøkning vurderes med Bra, Middels eller Svak.\nAndroid-appen lagrer lokalt og sender via Supabase.\nData: '+str(DATA)
   ttk.Label(settings,text=explanation,justify='left').grid(row=0,column=2,rowspan=10,padx=30,sticky='nw')
   root.protocol('WM_DELETE_WINDOW',self.close);self.refresh();root.after(2000,self.poll)
  def tree(self,parent,cols):
@@ -115,13 +117,16 @@ class App:
  def reset(self):
   self.edit_id=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
-   if k not in ['course','vehicle']:v.set('Middel' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
+   if k not in ['course','vehicle']:v.set('' if k in QUAL else '1' if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
  def save(self):
   try:
    d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id
-   if hasattr(self,'management') and self.cloud_panel.receiver.load():
+   validated=self.store.validate(d)
+   if missing_fields(validated) and getattr(self,'edit_revision',''):
+    raise ValueError('Skyredigering: fullfør feltene eller bruk - før lagring. Nye uferdige turer kan lagres lokalt.')
+   if not missing_fields(validated) and hasattr(self,'management') and self.cloud_panel.receiver.load():
     self.management.save(d,getattr(self,'edit_revision',''));return
-   self.store.save(d);self.reset();self.refresh();messagebox.showinfo('Lagret','Turen er lagret lokalt på PC.')
+   self.store.save(validated);self.reset();self.refresh();messagebox.showinfo('Lagret','Uferdig tur lagret lokalt – se rød prikk i turoversikten.' if missing_fields(validated) else 'Turen er lagret lokalt på PC.')
   except Exception as e:messagebox.showerror('Kunne ikke lagre',str(e))
  def edit(self):
   ids=self.table.selection()
@@ -147,6 +152,8 @@ class App:
  def filtered(self,rows):return [d for d in rows if all(v.get()=='Alle' or str(d[k])==v.get() for k,(v,box) in self.filters.items())]
  def refresh(self):
   rows=self.store.all();self.rows=rows;self.all_rows=self.store.all(True)
+  unfinished=sum(bool(missing_fields(d)) for d in self.all_rows)
+  self.trip_warning.set(f'● {unfinished} uferdige turer – åpne dem for å fullføre. Bruk - for bevisst utelatte felt.' if unfinished else '')
   for k,box in self.catalog_boxes.items():box['values']=sorted({d[k] for d in self.store.all(True)},key=str.casefold)
   for k,(v,box) in self.filters.items():
    values=['Alle']+sorted({str(d[k]) for d in self.store.all(True)});box['values']=values
@@ -155,7 +162,7 @@ class App:
   for d in self.ranked:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],d['trip'],d['score'],d['minutes'],f"{d['tid']:.3f}",f"{d['forbruk10']:.2f}",f"{d['fart']:.1f}",int(d['stops']),*[d[k] for k in QUAL]])
   scored_ids={d['id'] for d in rows}
   for d in self.filtered(self.store.all(True)):
-   if d['id'] not in scored_ids:self.table.insert('', 'end',iid=d['id'],values=[d['driver'],d['course'],d['vehicle'],d['trip'],'—',d['minutes'],'—','—','—',d['stops'],*[d[k] for k in QUAL]])
+   if d['id'] not in scored_ids:self.table.insert('', 'end',iid=d['id'],tags=('incomplete',) if missing_fields(d) else (),values=[('● ' if missing_fields(d) else '✓ ')+d['driver'],d['course'],d['vehicle'],d['trip'],'Ikke ferdig' if missing_fields(d) else '—',d['minutes'],'—','—','—',d['stops'],*[d[k] for k in QUAL]])
   if selected and self.table.exists(selected[0]):self.table.selection_set(selected)
   psel=self.progress.selection();self.progress.delete(*self.progress.get_children());self.change_rows=changes(rows)
   for i,d in enumerate(self.change_rows):

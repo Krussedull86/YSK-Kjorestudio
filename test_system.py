@@ -7,7 +7,26 @@ class Tests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name)/'test.db')
  def tearDown(self):self.tmp.cleanup()
  def data(self,**kwargs):
-  return dict(driver='Kjell',course='YSK',vehicle='C',trip=1,minutes=60,km=40,liters=12,stops=2,**{k:'Bra' for k in QUAL})|kwargs
+  return dict(driver='Kjell',course='YSK',vehicle='C',trip=1,date='2026-10-08',start_time='09:00',teacher='KK',minutes=60,km=40,liters=12,stops=2,**{k:'Bra' for k in QUAL})|kwargs
+ def test_incomplete_roundtrip_and_finish(self):
+  from core import missing_fields
+  d=self.store.save(self.data(minutes='',komfort='',teacher=''))
+  self.assertEqual(d['completion'],'incomplete');self.assertEqual(d['minutes'],'')
+  self.assertEqual(len(self.store.all(True)),1);self.assertEqual(self.store.all(),[])
+  self.assertEqual(ranking([d],self.store.settings()),[])
+  finished=self.store.save(d|{'minutes':60,'komfort':'Bra','teacher':'KK'})
+  self.assertEqual(finished['completion'],'complete');self.assertFalse(missing_fields(finished));self.assertEqual(len(self.store.all()),1)
+ def test_explicit_omissions_are_complete(self):
+  from core import missing_fields
+  d=self.store.save(self.data(**{k:'-' for k in ['minutes','km','liters','stops',*QUAL,'date','start_time','teacher']}))
+  self.assertFalse(missing_fields(d));self.assertEqual(d['completion'],'complete');self.assertEqual(self.store.all(),[])
+ def test_cloud_rejects_incomplete_before_network(self):
+  from cloud_sync import Receiver
+  from unittest.mock import patch
+  receiver=Receiver(self.store,Path(self.tmp.name)/'session')
+  with patch.object(receiver,'admin') as admin:
+   with self.assertRaises(ValueError):receiver.save_trip(self.data(km=''))
+   admin.assert_not_called()
  def test_connection_closes(self):
   import sqlite3
   with self.store.conn() as c:c.execute('SELECT 1')
