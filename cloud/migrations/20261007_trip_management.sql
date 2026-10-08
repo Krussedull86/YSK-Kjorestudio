@@ -46,7 +46,7 @@ begin
  rev:=coalesce(nullif(p_body->>'revision','')::uuid,gen_random_uuid());
  select * into t from public.ysk_trips where id=ident for update;
  if found then
-  if t.organization_id<>m.organization_id or (t.owner_id<>m.user_id and m.role<>'admin') then return jsonb_build_object('status',403,'message','Du kan bare endre egne turer i din skole.'); end if;
+  if t.organization_id is distinct from m.organization_id or (t.owner_id<>m.user_id and m.role<>'admin') then return jsonb_build_object('status',403,'message','Du kan bare endre egne turer i din skole.'); end if;
   if t.revision=rev then return jsonb_build_object('row',to_jsonb(t),'message','Lagret.'); end if;
   if coalesce(p_body->>'expected_revision','')<>t.revision::text then return jsonb_build_object('status',409,'message','Turen er endret siden du åpnet den. Hent ny versjon før du prøver igjen.'); end if;
   if a='trip_save' and t.deleted_at is not null then return jsonb_build_object('status',409,'message','Turen ligger i papirkurven. Gjenopprett den først.'); end if;

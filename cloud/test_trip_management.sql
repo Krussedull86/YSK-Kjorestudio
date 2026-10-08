@@ -31,6 +31,15 @@ begin
  if r ? 'status' or r->'row'->>'deleted_at' is not null then raise exception 'Restore failed: %',r; end if;
  r:=public.ysk_manage_trips(gen_random_uuid(),jsonb_build_object('action','trip_save','payload',p));
  if (r->>'status')::int<>403 then raise exception 'Non-member allowed'; end if;
+ update public.ysk_memberships set role='teacher' where user_id=u;
+ r:=public.ysk_manage_trips(u,jsonb_build_object('action','catalog_delete','kind','course','name',name||'A'));
+ if (r->>'status')::int<>403 then raise exception 'Teacher bulk delete allowed'; end if;
+ select revision::text into rev from public.ysk_trips where id=a;
+ r:=public.ysk_manage_trips(u,jsonb_build_object('action','trip_delete','id',a,'expected_revision',rev));
+ if r ? 'status' then raise exception 'Teacher could not delete own trip'; end if;
+ update public.ysk_memberships set active=false where user_id=u;
+ r:=public.ysk_manage_trips(u,jsonb_build_object('action','catalog_delete','kind','course','name',name||'A'));
+ if (r->>'status')::int<>403 then raise exception 'Inactive user allowed'; end if;
  if has_function_privilege('authenticated','public.ysk_manage_trips(uuid,jsonb)','execute') or not has_function_privilege('service_role','public.ysk_manage_trips(uuid,jsonb)','execute') then raise exception 'Incorrect RPC privileges'; end if;
 end $$;
 rollback;

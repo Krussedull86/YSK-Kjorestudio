@@ -1,0 +1,16 @@
+YSK KJØRESTUDIO 1.5.0 · BYGG 8
+
+Åpne menyen ☰ øverst til høyre for turer, administrasjon, innstillinger, synkronisering og oppdateringer. Resten av skjermen ruller.
+
+TIDTAKING
+Start: registrerer dato og starttid automatisk.
+Stopp: fyller inn forbrukt tid i minutter.
+Fortsett: måler videre på samme tur, uten tiden mellom stopp og fortsett.
+Nullstill klokke: sletter bare målingen, ikke manuelt registrert tid.
+
+Klokken fortsetter når skjermen er låst eller en annen app er åpen. Klokken og turskjemaet beholdes ved omstart av appen.
+Ved telefonomstart beregnes videre tid fra telefonens klokke.
+Stopp klokken før du lagrer turen. Du kan fortsatt skrive inn kjøretiden manuelt.
+
+Meny → Fortsett tur: åpner utkastet igjen.
+Meny → Ny tur: nullstiller utkastet og klokken etter bekreftelse.

@@ -2,11 +2,21 @@
 
 Lokal klasseromsvisning på Windows og Android-registrering ute i bilen. Supabase samler turer fra lærere med egne kontoer.
 
-Versjon **1.3.2 / bygg 6** har hvit klasseromsvisning, elleve statistikkvalg, elevgrafer, tur 1–5 og dev/stable per bruker. Fullskjerm velges på skjerm 1 eller 2. Rangering sammenligner samme kurs, bil og turnummer.
+Versjon **1.5.0 / bygg 8** har hvit klasseromsvisning, elleve statistikkvalg, elevgrafer, tur 1–5 og dev/stable per bruker. Fullskjerm velges på skjerm 1 eller 2. Rangering sammenligner samme kurs, bil og turnummer.
 
 ## Bruk
 
 Installer APK over eksisterende app. Kjør den separate `YSK_Kjorestudio.exe` på Windows uten Python. Kildepakken kan også kjøres med `Start.bat`. `Start_Demo.bat` viser demodata. Les `LES_MEG.txt` for registrering, oppdateringer og teststatus.
+
+## Telefon og tidtaking
+
+Én liten menylinje; status og innhold ruller, uten fast bunn. Tidtakeren ligger øverst i registreringen. **Start** fyller inn dato/starttid; **Stopp** fyller inn kjøretid. **Fortsett** gjenopptar samme måling. Meny → **Fortsett tur** åpner utkastet etter appbytte. Tidtakingen fortsetter med skjermen av. Nullstilling av klokken beholder manuelt registrert tid. Stopp før lagring.
+
+## Rediger og slett
+
+Android: **Mine turer → Administrer turer, kurs og biler**. PC: fanen **Turer, kurs og biler → Hent fra sky**. Velg tur, kurs eller bil og bruk redigering eller sletting. Kurs-/bilnavn endres på alle aktive tilhørende turer. Sletting av kurs eller bil flytter tilhørende turer til papirkurven, med antallet vist før bekreftelse. Turene kan gjenopprettes enkeltvis.
+
+Lærere endrer egne turer. Admin administrerer alle skolens turer og kurs/biler. PC-endringer synkroniseres tilbake til Android. Gamle offline-utkast kan ikke overskrive en nyere skyversjon. Oppdater både APK og EXE. Les `LES_MEG_REDIGERING.txt`.
 
 ## Oppdateringer
 
@@ -21,6 +31,7 @@ GitHub-repoet er offentlig. GitHub Actions bygger og signerer APK og EXE automat
 python -m unittest discover -v
 node cloud/functions/ysk-admin/test.mjs
 node cloud/functions/ysk-admin/test_updates.mjs
+node cloud/functions/ysk-admin/test_trips.mjs
 node cloud/functions/ysk-publish/test.mjs
 ```
 

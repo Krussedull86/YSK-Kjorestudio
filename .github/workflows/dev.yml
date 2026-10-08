@@ -58,6 +58,11 @@ jobs:
           (p/'password.txt').write_text(os.environ['STORE_PASSWORD'])
           (p/'key_password.txt').write_text(os.environ['KEY_PASSWORD'])
           PY
+      - name: Test trip stopwatch
+        run: |
+          mkdir -p timer-test
+          javac -d timer-test android/src/no/talappen/ysk/TripTimer.java android/tests/TripTimerTest.java
+          java -cp timer-test TripTimerTest
       - run: python android/build_android.py
       - uses: actions/upload-artifact@v4
         with:
