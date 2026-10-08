@@ -15,6 +15,8 @@ def action(body):
  with opener.open(request,timeout=120) as r:return json.load(r)
 def main():
  files={'android':ROOT/'release_output/android/YSK_Kjorestudio_Android.apk','windows':ROOT/'release_output/windows/YSK_Kjorestudio.exe'}
+ files={p:f for p,f in files.items() if f.is_file()}
+ if not files:raise ValueError('No platform artifacts to publish')
  assets={p:{'size':f.stat().st_size,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()} for p,f in files.items()}
  result=action({'action':'release_prepare','version':VERSION,'build':BUILD,'notes':(ROOT/'CHANGELOG.txt').read_text(encoding='utf-8'),'assets':assets})
  for platform,upload in result['uploads'].items():

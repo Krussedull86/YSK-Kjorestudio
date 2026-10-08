@@ -5,10 +5,16 @@ export async function updateAction(body,member,server,base,secret){
  const org=encodeURIComponent(member.organization_id),channel=member.update_channel||'stable';
  if(body.action==='update_check'||body.action==='download_update'){
   if(!platformOK(body.platform))return {status:400,data:{message:'Ugyldig plattform.'}};
+  let effectiveChannel=channel;
   let pointers=await server('/rest/v1/ysk_update_channels?organization_id=eq.'+org+'&channel=eq.'+channel+'&select=release_id');
-  if(!pointers.length&&channel==='dev')pointers=await server('/rest/v1/ysk_update_channels?organization_id=eq.'+org+'&channel=eq.stable&select=release_id');
+  if(!pointers.length&&channel==='dev'){effectiveChannel='stable';pointers=await server('/rest/v1/ysk_update_channels?organization_id=eq.'+org+'&channel=eq.stable&select=release_id');}
   if(!pointers.length)return {data:{channel,release:null}};
-  const releases=await server('/rest/v1/ysk_releases?id=eq.'+pointers[0].release_id+'&organization_id=eq.'+org+'&ready=eq.true');const release=releases[0];const asset=release?.assets?.[body.platform];
+  const releases=await server('/rest/v1/ysk_releases?id=eq.'+pointers[0].release_id+'&organization_id=eq.'+org+'&ready=eq.true');let release=releases[0];
+  if(release&&!release.assets?.[body.platform]){
+   const previous=await server('/rest/v1/ysk_releases?organization_id=eq.'+org+'&ready=eq.true&build=lte.'+release.build+'&assets->'+body.platform+'=not.is.null'+(effectiveChannel==='stable'?'&stable_at=not.is.null':'')+'&order=build.desc&limit=1');
+   release=previous[0];
+  }
+  const asset=release?.assets?.[body.platform];
   if(!asset)return {data:{channel,release:null}};
   const result={id:release.id,version:release.version,build:release.build,notes:release.notes,published_at:release.created_at,stable_at:release.stable_at,asset:{name:asset.name,size:asset.size,sha256:asset.sha256}};
   if(body.action==='download_update'){

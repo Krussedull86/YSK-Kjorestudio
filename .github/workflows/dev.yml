@@ -3,13 +3,35 @@ on:
   push:
     branches: [dev]
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Plattform som skal bygges og publiseres
+        type: choice
+        default: auto
+        options: [auto, windows, android, both]
 permissions:
   contents: read
 concurrency:
   group: ysk-dev
   cancel-in-progress: false
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      windows: ${{ steps.select.outputs.windows }}
+      android: ${{ steps.select.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: select
+        env:
+          BEFORE: ${{ github.event.before }}
+          TARGET: ${{ inputs.platform || 'auto' }}
+        run: python scripts/select_platforms.py
   windows:
+    needs: changes
+    if: ${{ needs.changes.outputs.windows == 'true' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +47,8 @@ jobs:
           path: dist/YSK_Kjorestudio.exe
           if-no-files-found: error
   android:
-    if: ${{ vars.YSK_RELEASE_ENABLED == 'true' }}
+    needs: changes
+    if: ${{ needs.changes.outputs.android == 'true' && vars.YSK_RELEASE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +94,16 @@ jobs:
         run: |
           javac -encoding UTF-8 -d timer-test android/src/no/talappen/ysk/TripCompletion.java android/tests/TripCompletionTest.java
           java -cp timer-test TripCompletionTest
+      - name: Stamp Android version for this release
+        run: |
+          python - <<'PYVERSION'
+          from pathlib import Path
+          import re
+          from version import VERSION, BUILD
+          p = Path('android/AndroidManifest.xml')
+          text = re.sub(r'android:versionCode="[^"]+"', f'android:versionCode="{BUILD}"', p.read_text())
+          p.write_text(re.sub(r'android:versionName="[^"]+"', f'android:versionName="{VERSION}"', text))
+          PYVERSION
       - run: python android/build_android.py
       - uses: actions/upload-artifact@v4
         with:
@@ -78,7 +111,7 @@ jobs:
           path: android/YSK_Kjorestudio_Android.apk
           if-no-files-found: error
   publish-dev:
-    if: ${{ vars.YSK_RELEASE_ENABLED == 'true' }}
+    if: ${{ always() && vars.YSK_RELEASE_ENABLED == 'true' && (needs.windows.result == 'success' || needs.android.result == 'success') && (needs.windows.result == 'success' || needs.windows.result == 'skipped') && (needs.android.result == 'success' || needs.android.result == 'skipped') }}
     needs: [windows, android]
     runs-on: ubuntu-latest
     permissions:

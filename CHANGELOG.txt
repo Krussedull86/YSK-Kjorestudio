@@ -1,3 +1,5 @@
+1.6.3 / bygg 15 – Uavhengige Windows-/Android-bygg basert på endrede filer. Manuelt valg: auto, windows, android, both. Oppdateringssjekk beholder forrige utgave for urørt plattform.
+
 1.6.2 / bygg 14 – PC: lagring av uferdige turer lokalt, rød prikk og varsel, tomme vurderinger og - for bevisst utelatte felt. Uferdige turer tas ikke med i rangering. Skyredigering krever fullføring eller -.
 
 1.6.1 / bygg 13 (dev)

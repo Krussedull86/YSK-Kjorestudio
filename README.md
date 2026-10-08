@@ -36,3 +36,6 @@ node cloud/functions/ysk-publish/test.mjs
 ```
 
 Android bygges med JDK 17 og SDK 35 gjennom `android/build_android.py`. Windows EXE bygges med PyInstaller på Windows. Private signing-filer, databaser og innloggingsøkter skal aldri inn i GitHub. Behold samme Android-signering for å oppdatere appen uten å miste lokale data.
+
+### Separate dev-oppdateringer
+Windows-filer bygger bare Windows; filer under `android/` bygger bare Android. Felles sky- og byggeoppsett bygger begge. Dokumentasjon alene starter ingen bygg. I GitHub Actions → YSK dev → Run workflow kan du velge `auto`, `windows`, `android` eller `both`. En push med `[windows-only]` eller `[android-only]` i siste commit-tittel velger eksplisitt bare den plattformen. Øk `BUILD` i `version.py` før en utgivelse; byggnummeret er en felles, stigende utgivelsessekvens. Android-manifestet får utgivelsens versjon under bygging. Plattformen som ikke publiseres beholder forrige oppdatering og versjon.

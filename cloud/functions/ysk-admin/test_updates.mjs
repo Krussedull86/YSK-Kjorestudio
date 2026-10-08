@@ -19,3 +19,15 @@ r=await scenario({action:'release_promote',release_id:'release-A',confirm:'stabl
 r=await scenario({action:'release_commit',release_id:'release-A'},{ready:false});assert.equal(r.result.status,409);assert(!r.calls.some(c=>c.path.includes('/rpc/')));
 r=await scenario({action:'release_prepare',version:'1.3.2',build:6,assets:{android:{size:50000001,sha256:'a'.repeat(64)}}});assert.equal(r.result.status,400);assert.equal(r.calls.length,0);
 console.log('Update authorization, channel isolation, stale release, immutable promotion and bad hash scenarios passed.');
+// Partial releases preserve the untouched platform's version and download identity.
+for(const platform of ['android','windows'])for(const channel of ['dev','stable']){
+ const old={...release,id:'old-'+platform,build:3,version:'1.2.9',assets:{[platform]:release.assets.android}};
+ const latest={...release,id:'new',build:5,assets:{[platform==='android'?'windows':'android']:release.assets.android}};
+ const calls=[];
+ const server=async(path)=>{calls.push(path);if(path.includes('ysk_update_channels'))return [{release_id:'new'}];if(path.includes('id=eq.new'))return [latest];if(path.includes('build=lte.5'))return [old];if(path.includes('/object/sign/'))return {signedURL:'/object/sign/file'};throw Error(path);};
+ let result=await action({action:'update_check',platform},{organization_id:'school-A',role:'teacher',update_channel:channel},server,'https://school.test','secret');
+ assert.equal(result.data.release.id,old.id);assert.equal(result.data.release.build,3);
+ const query=calls.find(p=>p.includes('build=lte.5'));assert(query.includes('organization_id=eq.school-A'));assert(query.includes('&ready=eq.true'));assert(query.includes('&assets->'+platform+'=not.is.null'));assert.equal(query.includes('stable_at=not.is.null'),channel==='stable');
+ result=await action({action:'download_update',platform,release_id:old.id},{organization_id:'school-A',role:'teacher',update_channel:channel},server,'https://school.test','secret');assert(result.data.release.asset.url);
+}
+console.log('Independent Windows/Android update and download checks passed.');
