@@ -1,3 +1,5 @@
+1.9.2 / bygg 23 – Dev: fjerner hele sammenligningen foran/bak planen, i rute, stoppfrister, nedtelling og tidsavvik fra Android og klasseromsvisningen på PC. Viser faktisk tid fra start, minutter mellom stopp, rampe/avbrutt og forventet totaltid som informasjon.
+
 1.9.1 / bygg 22 – Dev: fristfeltet er fjernet fra kursoppsettet på Android og PC. Velg antall distribusjonsstopp og forventet totaltid; tidsplanen fordeles automatisk. Retter manglende servertilgang til valideringen ved lagring av kursoppsett.
 
 1.9.0 / bygg 21 – Dev: distribusjon med Start, leveringsstopp «Rygget til rampe» og «Avbrutt» med grunn. Kursoppsettet angir 0–30 stopp, forventet totaltid og valgfrie stoppfrister fra start. Klokken inkluderer lasting, venting og pauser. Turloggen viser minutter mellom stopp, samlet fra start, avvik fra planen og avbrutte stopp. PC og klasserom har full stopptabell. Tidsplanen følger turen selv om kurset endres senere.

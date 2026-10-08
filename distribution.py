@@ -49,14 +49,11 @@ def validate_run(data):
 def rows(data):
  data=validate_run(data);result=[];previous=0
  for e in data['events']:
-  total=e['elapsed_minutes'];expected=data['deadlines'][e['stop']-1]
-  result.append(e|{'segment_minutes':total-previous,'expected_minutes':expected,'delta_minutes':total-expected});previous=total
+  total=e['elapsed_minutes']
+  result.append(e|{'segment_minutes':total-previous});previous=total
  return result
-
-def status(delta):
- return f'{abs(delta):.1f} min over tid' if delta>0 else f'{abs(delta):.1f} min foran planen' if delta<0 else 'I rute'
 
 def summary(data):
  data=validate_run(data);completed=sum(e['status']=='ramp' for e in data['events']);aborted=sum(e['status']=='aborted' for e in data['events']);finished=data['finished_minutes']
- state='Pågår' if finished is None else status(finished-data['expected_minutes'])
+ state='Pågår' if finished is None else 'Avsluttet'
  return f"{completed}/{len(data['deadlines'])} til rampe · {aborted} avbrutt · {state}"

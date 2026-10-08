@@ -12,7 +12,7 @@ class DistributionTests(unittest.TestCase):
   for args in [(31,60),(-1,60),(1.5,60),(3,0),(3,60,'15;10;60'),(3,60,'10;20'),(3,60,'10;20;61')]:
    with self.assertRaises(ValueError):plan(*args)
  def test_stop_intervals_totals_and_aborted(self):
-  d=self.run_data();result=rows(d);self.assertEqual([r['segment_minutes'] for r in result],[18,25,25]);self.assertEqual([r['delta_minutes'] for r in result],[-2,3,8]);self.assertIn('2/3 til rampe',summary(d));self.assertIn('1 avbrutt',summary(d));self.assertIn('10.0 min over tid',summary(d))
+  d=self.run_data();result=rows(d);self.assertEqual([r['segment_minutes'] for r in result],[18,25,25]);self.assertIn('2/3 til rampe',summary(d));self.assertIn('1 avbrutt',summary(d));self.assertIn('Avsluttet',summary(d))
  def test_invalid_and_incomplete(self):
   d=self.run_data();d['finished_minutes']=None;d['events']=d['events'][:1];self.assertIn('Pågår',summary(d));d['finished_minutes']=25
   with self.assertRaises(ValueError):validate_run(d)
