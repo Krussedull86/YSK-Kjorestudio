@@ -38,7 +38,7 @@ def validate_run(data):
   elapsed=number(e.get('elapsed_minutes'))
   if elapsed<last:raise ValueError('Stopptidene må være stigende.')
   reason=e.get('reason','')
-  if not isinstance(reason,str) or len(reason)>300:raise ValueError('Avbruddsgrunn: maks 300 tegn.')
+  if not isinstance(reason,str) or len(reason)>300:raise ValueError('Kommentar: maks 300 tegn.')
   checked.append({'stop':i,'status':e['status'],'elapsed_minutes':elapsed,'reason':reason});last=elapsed
  finished=data.get('finished_minutes')
  if finished is not None:
@@ -57,3 +57,8 @@ def summary(data):
  data=validate_run(data);completed=sum(e['status']=='ramp' for e in data['events']);aborted=sum(e['status']=='aborted' for e in data['events']);finished=data['finished_minutes']
  state='Pågår' if finished is None else 'Avsluttet'
  return f"{completed}/{len(data['deadlines'])} til rampe · {aborted} avbrutt · {state}"
+
+def return_minutes(data):
+ data=validate_run(data)
+ if data['finished_minutes'] is None or len(data['events'])!=len(data['deadlines']):return None
+ return data['finished_minutes']-data['events'][-1]['elapsed_minutes']

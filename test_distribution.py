@@ -1,12 +1,14 @@
 import unittest,tempfile,copy
 from pathlib import Path
-from distribution import plan,validate_run,rows,summary
+from distribution import plan,validate_run,rows,summary,return_minutes
 from course_setup import save_course,course_config,import_courses
 from core import Store
 import test_system
 from cloud_sync import fingerprint
 class DistributionTests(unittest.TestCase):
  def run_data(self):return dict(version=1,started_at=1791486000000,expected_minutes=60,deadlines=[20,40,60],events=[dict(stop=1,status='ramp',elapsed_minutes=18,reason=''),dict(stop=2,status='aborted',elapsed_minutes=43,reason='Stengt rampe'),dict(stop=3,status='ramp',elapsed_minutes=68,reason='')],finished_minutes=70)
+ def test_school_roundtrip_return_and_ramp_comment(self):
+  d=self.run_data();d['expected_minutes']=120;d['finished_minutes']=120;d['events'][-1]['elapsed_minutes']=95;d['events'][0]['reason']='Trang rampe';self.assertEqual(return_minutes(d),25);self.assertEqual(validate_run(d)['events'][0]['reason'],'Trang rampe');d['finished_minutes']=None;self.assertIsNone(return_minutes(d))
  def test_plan_custom_and_even(self):
   self.assertEqual(plan(3,60)['deadlines'],[20,40,60]);self.assertEqual(plan(3,'60','15; 35; 60')['deadlines'],[15,35,60]);self.assertEqual(plan()['stop_count'],0)
   for args in [(31,60),(-1,60),(1.5,60),(3,0),(3,60,'15;10;60'),(3,60,'10;20'),(3,60,'10;20;61')]:

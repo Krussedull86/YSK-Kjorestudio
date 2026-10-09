@@ -133,7 +133,7 @@ class App:
   ttk.Label(dialog,text='Kursnavn').pack();ttk.Combobox(dialog,textvariable=name,values=course_names(self.store)).pack(padx=20,pady=8)
   ttk.Label(dialog,text='Antall aktive turer (tur 1 til valgt antall)').pack();ttk.Combobox(dialog,textvariable=count,values=[1,2,3,4,5],state='readonly').pack(padx=20,pady=8)
   ttk.Label(dialog,text='\n'.join(f'{i}. {n}' for i,n in enumerate(NAMES,1))).pack(padx=20,pady=8)
-  for label,var in [('Antall distribusjonsstopp (0–30; 0 = av)',stop_count),('Forventet totaltid i minutter',total)]:
+  for label,var in [('Antall distribusjonsstopp (0–30; 0 = av)',stop_count),('Forventet totaltid skole → skole (minutter)',total)]:
    ttk.Label(dialog,text=label).pack(padx=20);ttk.Entry(dialog,textvariable=var,width=55).pack(padx=20,pady=5)
   def done():
    try:
