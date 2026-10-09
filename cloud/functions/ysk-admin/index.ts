@@ -1,3 +1,4 @@
+import { feedbackAction } from './feedback.ts';
 import { schoolAction, managedSchools, schoolTarget } from './schools.ts';
 import { updateAction } from './updates.ts';
 import { tripAction } from './trips.ts';
@@ -30,6 +31,7 @@ Deno.serve(async (req) => {
    const divisions=member.division_id?await server('/rest/v1/ysk_divisions?id=eq.'+encodeURIComponent(member.division_id)+'&organization_id=eq.'+encodeURIComponent(member.organization_id)+'&select=id,name'):[];
    return reply({ member, school:schools[0]||null, division:divisions[0]||null });
   }
+  const feedback=await feedbackAction(body,member,server);if(feedback)return reply(feedback.data,feedback.status||200);
   const schoolResult=await schoolAction(body,member,server);if(schoolResult)return reply(schoolResult.data,schoolResult.status||200);
   const tripResult=await tripAction(body,member,server);if(tripResult)return reply(tripResult.data,tripResult.status||200);
   const update=await updateAction(body,member,server,base,secret);if(update)return reply(update.data,update.status||200);

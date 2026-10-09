@@ -60,3 +60,11 @@ Tidligere turer beholdes i opprinnelig skole. Administratorer kan få ny avdelin
 
 ## Påkrevd innlogging (dev 1.8.1)
 PC-programmet bygger ikke registrerings-, admin- eller klasseromsvisning og starter ikke lokal mobilserver før serveren har godkjent kontoen. Android sperrer registrering, resultater, meny og tilbakeknapp før innlogging. Lagret kryptert økt kontrolleres automatisk ved oppstart; ugyldig økt gir ingen tilgang. Oppstart/kontokontroll krever nett. Etter innlogging kan lokale turer lagres mens nettet er borte. Logg ut returnerer til innlogging og beholder lokale turer og utkast.
+
+## Tilbakemeldinger og feilmeldinger (dev 1.10.0)
+
+Android: meny → **Tilbakemelding / feilmelding**. PC: fanen **Tilbakemelding**. Velg type, skriv tittel og melding og send. Utkast beholdes ved nettfeil. Navn, programversjon og enhetsinformasjon følger meldingen.
+
+PC-admin: **Admin / lærere → Tilbakemeldinger / feilmeldinger**. Android-admin har samme innboks fra læreradministrasjonen. Admin kan merke Ny, Under behandling eller Ferdig, lese hele meldingen og se Discord-leveringen. Innboksen tilhører brukerens egen skole.
+
+I innboksen: **Discord · 2 webhooks**. Lim inn en Discord-webhook for **Tilbakemelding / forslag** og en for **Feilmelding**. Tomt felt beholder eksisterende; Deaktiver slår den av. Adressene lagres på serveren og leses ikke tilbake til klienten. Uten webhooks fungerer admininnboksen som vanlig. Sending til Discord feiler uavhengig av lagring; **Prøv Discord på nytt** brukes av admin. Ingen Discord-omtaler/pinger sendes. Maks ti nye meldinger per bruker per time.

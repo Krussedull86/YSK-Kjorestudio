@@ -313,6 +313,8 @@ if __name__=='__main__':
   app.management=ManagementPanel(app,app.cloud_panel.receiver)
   from admin_panel import AdminPanel
   app.admin_panel=AdminPanel(app,app.cloud_panel.receiver)
+  from feedback_panel import FeedbackPanel
+  app.feedback_panel=FeedbackPanel(app,app.cloud_panel.receiver,DATA)
   from updates import UpdatesPanel
   app.updates_panel=UpdatesPanel(app,app.cloud_panel.receiver,DATA)
  LoginGate(root,receiver,open_application)
