@@ -1,3 +1,5 @@
+1.9.3 / bygg 24 – Dev Android: Rygget til rampe og Avbryt stopp ligger i appmenyen og i det nedtrekkbare tidtakingsvarselet. Etter alle stopp vises Avslutt. Registrering fra varselet lagres i samme lokale stopplogg og oppdateres i skjemaet uten å miste andre felt.
+
 1.9.2 / bygg 23 – Dev: fjerner hele sammenligningen foran/bak planen, i rute, stoppfrister, nedtelling og tidsavvik fra Android og klasseromsvisningen på PC. Viser faktisk tid fra start, minutter mellom stopp, rampe/avbrutt og forventet totaltid som informasjon.
 
 1.9.1 / bygg 22 – Dev: fristfeltet er fjernet fra kursoppsettet på Android og PC. Velg antall distribusjonsstopp og forventet totaltid; tidsplanen fordeles automatisk. Retter manglende servertilgang til valideringen ved lagring av kursoppsett.
