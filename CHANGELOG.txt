@@ -1,3 +1,6 @@
+1.10.1 / B27
+Distribusjon viser stopp igjen, nedtelling av totaltiden skole til skole og tilgjengelig snitt per gjenværende stopp (inkludert retur). Avbrutte stopp telles som registrert. Nedtellingen stopper på null; turen avsluttes fortsatt manuelt ved skolen.
+
 1.10.0 / bygg 26 – Dev: tilbakemeldinger/forslag og feilmeldinger fra Android og PC. Meldinger med navn, versjon og enhetsinfo lagres i skolens admininnboks. Admin kan lese, filtrere, endre status og konfigurere to separate Discord-webhooks. Discord-feil mister ikke meldingen; admin kan prøve sending på nytt. Webhook-adressene holdes på serveren.
 
 1.9.4 / bygg 25 – Dev: distribusjon er skole til skole. Etter siste stopp vises Retur pågår; Avslutt tur brukes ved skolen. Returintervallet fra siste registrerte stopp vises separat på Android og PC. Til rampe i app/meny åpner valgfri kommentar etter å ha lagret tidspunktet. Kommentar kan legges til eller endres for hvert stopp, også stopp registrert fra varselet.

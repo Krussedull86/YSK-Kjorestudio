@@ -17,5 +17,8 @@ public final class DistributionRun {
  public void mark(String status,String reason,long monotonic,long wall,int boot){restoreEvent(events.size()+1,status,elapsed(monotonic,wall,boot),reason);}
  public void comment(int stop,String text){if(stop<1||stop>events.size()||text==null||text.length()>300)throw new IllegalArgumentException("Kommentar: maks 300 tegn.");Event e=events.get(stop-1);events.set(stop-1,new Event(e.stop,e.status,e.elapsedMillis,text));}
  public long returnMillis(long monotonic,long wall,int boot){if(events.size()!=deadlines.length)return 0;return Math.max(0,elapsed(monotonic,wall,boot)-events.get(events.size()-1).elapsedMillis);}
+ public int remainingStops(){return Math.max(0,deadlines.length-events.size());}
+ public long remainingMillis(long elapsed){return Math.max(0,Math.round(expectedMinutes*60000)-elapsed);}
+ public String remainingText(long elapsed){int stops=remainingStops();long left=remainingMillis(elapsed);String text=stops+" stopp igjen · "+String.format(Locale.ROOT,"%02d:%02d:%02d",left/3600000,left/60000%60,left/1000%60)+" igjen";if(stops>0)text+=String.format(Locale.getDefault(),"\nTilgjengelig snitt per stopp: %.1f min",left/60000.0/stops)+" (inkl. retur)";else text+="\nRetur til skolen";return text;}
  public void finish(long monotonic,long wall,int boot){if(events.size()!=deadlines.length)throw new IllegalArgumentException("Merk alle stopp til rampe eller avbrutt først.");long value=elapsed(monotonic,wall,boot);if(value>2592000000L)throw new IllegalArgumentException("Ugyldig oppdragstid.");finishedMillis=value;}
 }
