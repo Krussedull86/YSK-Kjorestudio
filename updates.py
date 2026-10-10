@@ -46,7 +46,7 @@ try {{
 """
 class UpdatesPanel:
  def __init__(self,app,receiver,data):
-  self.app=app;self.receiver=receiver;self.data=Path(data);self.queue=queue.Queue();self.busy=False;self.release=None;self.file=None;self.last=0
+  self.app=app;self.receiver=receiver;self.data=Path(data);self.queue=queue.Queue();self.busy=False;self.release=None;self.file=None;self.last=0;self.startup_checked=False
   frame=ttk.Frame(app.nb,padding=24);app.nb.add(frame,text='Oppdateringer')
   ttk.Label(frame,text='Oppdateringer',font=('Segoe UI',25,'bold')).pack(anchor='w')
   ttk.Label(frame,text=f'Installert: {VERSION} · bygg {BUILD}\nAdmin velger dev eller stable for hver bruker. Oppdateringer installeres når du velger det.').pack(anchor='w',pady=12)
@@ -63,6 +63,7 @@ class UpdatesPanel:
    except Exception as e:self.queue.put((False,str(e)))
   threading.Thread(target=work,daemon=True).start()
  def check(self):
+  if self.busy:return
   self.last=time.time();self.status.set('Sjekker din oppdateringskanal …');self.task(lambda:('check',self.receiver.admin('update_check',platform='windows')))
  def get(self):
   if not self.release or self.busy:return
@@ -91,6 +92,11 @@ class UpdatesPanel:
      self.release=value.get('release');self.file=None;channel=value['channel'];r=self.release;new=r and r['build']>BUILD
      self.status.set(f'Kanal: {channel} · '+(f"Ny versjon {r['version']} · bygg {r['build']} · {r['published_at'][:10]}" if new else 'Du har siste tilgjengelige utgave.' if r else 'Ingen PC-utgave er publisert i denne kanalen ennå.'))
      self.notes.configure(state='normal');self.notes.delete('1.0','end');self.notes.insert('1.0',r['notes'] if r else '');self.notes.configure(state='disabled');self.get_button.configure(state='normal' if new else 'disabled',text='Last ned og installer')
+     if new and not self.startup_checked:
+      self.startup_checked=True
+      if messagebox.askyesno('Ny YSK-utgave',f"Versjon {r['version']} er tilgjengelig på {channel}. Åpne Oppdateringer?"):
+       self.app.nb.select(self.get_button.master)
+     else:self.startup_checked=True
   except queue.Empty:pass
   if not self.busy and time.time()-self.last>3600:
    try:

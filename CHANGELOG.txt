@@ -1,3 +1,5 @@
+1.12.0 / bygg 29 – Dev Android og Windows: parameterbank, versjonerte turmaler og egendefinerte parameterturer. Admin velger felt, krav, grafer, faste poenggrenser og vekting samt turmaler per kurs. Gamle turer beholder sitt oppsett. Lokale utkast og ventende innsending beholdes. PC har analyse av sammenlignbare parameterturer. Automatisk oppdateringssjekk etter innlogging ved oppstart varsler ny tilgjengelig utgave.
+
 1.11.0 / bygg 28 – Dev Windows: ny kompakt klasseromsvisning med alle elever i rullbar liste, poeng for optimaltur 1–2–3 og analysefelt med linjegrafer og prosentvis endring. Felles relativ poengskala innen kurs og bil for de tre turene, med gjeldende vekter. Bilbytte og manglende verdier merkes. Distribusjon og langtur vises separat med turdata og leveringsstopp. Åpnes via Vis på storskjerm.
 
 1.10.0 / bygg 26 – Dev: tilbakemeldinger/forslag og feilmeldinger fra Android og PC. Meldinger med navn, versjon og enhetsinfo lagres i skolens admininnboks. Admin kan lese, filtrere, endre status og konfigurere to separate Discord-webhooks. Discord-feil mister ikke meldingen; admin kan prøve sending på nytt. Webhook-adressene holdes på serveren.

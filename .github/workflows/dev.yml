@@ -66,6 +66,7 @@ jobs:
           node cloud/functions/ysk-admin/test_trips.mjs
           node cloud/functions/ysk-admin/test_distribution.mjs
           node cloud/functions/ysk-admin/test_feedback.mjs
+          node cloud/functions/ysk-admin/test_templates.mjs
           node cloud/functions/ysk-admin/test_schools.mjs
           node cloud/functions/ysk-publish/test.mjs
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"

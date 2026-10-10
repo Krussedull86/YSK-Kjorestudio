@@ -1,3 +1,4 @@
+import { templateAction } from './templates.ts';
 import { feedbackAction } from './feedback.ts';
 import { schoolAction, managedSchools, schoolTarget } from './schools.ts';
 import { updateAction } from './updates.ts';
@@ -24,13 +25,14 @@ Deno.serve(async (req) => {
   const matches = await server('/rest/v1/ysk_memberships?user_id=eq.' + encodeURIComponent(user.id) + '&select=user_id,organization_id,display_name,email,role,active,update_channel,division_id');
   const member = matches?.[0];
   if (!member?.active) return reply({ message: 'Brukeren har ikke aktiv tilgang til skolen.' }, 403);
-  const raw = await req.text(); if (raw.length > 32000) return reply({ message: 'For stor forespørsel.' }, 413);
+  const raw = await req.text(); if (raw.length > 128000) return reply({ message: 'For stor forespørsel.' }, 413);
   const body = JSON.parse(raw || '{}');
   if (body.action === 'me') {
    const schools=await server('/rest/v1/ysk_organizations?id=eq.'+encodeURIComponent(member.organization_id)+'&select=id,name');
    const divisions=member.division_id?await server('/rest/v1/ysk_divisions?id=eq.'+encodeURIComponent(member.division_id)+'&organization_id=eq.'+encodeURIComponent(member.organization_id)+'&select=id,name'):[];
    return reply({ member, school:schools[0]||null, division:divisions[0]||null });
   }
+  const templates=await templateAction(body,member,server);if(templates)return reply(templates.data,templates.status||200);
   const feedback=await feedbackAction(body,member,server);if(feedback)return reply(feedback.data,feedback.status||200);
   const schoolResult=await schoolAction(body,member,server);if(schoolResult)return reply(schoolResult.data,schoolResult.status||200);
   const tripResult=await tripAction(body,member,server);if(tripResult)return reply(tripResult.data,tripResult.status||200);
