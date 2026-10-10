@@ -1,0 +1,52 @@
+name: YSK stable GitHub release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/stable-release.yml', 'marketing/release.md']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ysk-stable-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+          run-id: 38039800328
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release/windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+          run-id: 37905845449
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release/android
+      - name: Verify exact tested release files
+        run: |
+          python - <<'PY'
+          import hashlib,pathlib
+          files=[('release/windows/YSK_Kjorestudio.exe','022c0f832896ac4dc7f5b931cc49ba5d7784a62728c225cf8771c8f924abdcc2','YSK_Kjorestudio_Windows_1.11.0.exe'),('release/android/YSK_Kjorestudio_Android.apk','b5469c58fb315d564a2bafb2a4ff1fc2ae87dd35bcafaac4ef2a3e1e02783e70','YSK_Kjorestudio_Android_1.10.1.apk')]
+          target=pathlib.Path('stable');target.mkdir()
+          checks=[]
+          for source,expected,name in files:
+              data=pathlib.Path(source).read_bytes()
+              actual=hashlib.sha256(data).hexdigest()
+              if actual!=expected:raise SystemExit('Artifact SHA-256 mismatch: '+name)
+              (target/name).write_bytes(data);checks.append(actual+'  '+name)
+          (target/'SHA256SUMS.txt').write_text('\n'.join(checks)+'\n')
+          PY
+      - name: Publish EXE and APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view v1.11.0 >/dev/null 2>&1; then
+            gh release create v1.11.0 --target "$GITHUB_SHA" --title "YSK Kjørestudio – stabil: Windows 1.11.0 / Android 1.10.1" --notes-file marketing/release.md --draft
+          fi
+          gh release upload v1.11.0 stable/* --clobber
+          gh release edit v1.11.0 --draft=false --latest --notes-file marketing/release.md

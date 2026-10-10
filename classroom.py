@@ -1,8 +1,11 @@
 """Classroom projections: one row per student, comparable ranks and first/latest change."""
 from core import metrics,ranking,QUAL
+from course_setup import trip_number
 
 def key(d):return d['course'],d['vehicle'],d['driver']
-def board(rows,weights,course='Alle',vehicle='Alle',trip='Alle'):
+def board(rows,weights,course='Alle',vehicle='Alle',trip='Alle',selected_trips=None):
+ trip=trip_number(trip)
+ if selected_trips is not None:rows=[d for d in rows if d['trip'] in selected_trips]
  selected=[d for d in rows if (course=='Alle' or d['course']==course) and (vehicle=='Alle' or d['vehicle']==vehicle)]
  ranked=ranking(selected,weights);groups={};positions={}
  for d in ranked:

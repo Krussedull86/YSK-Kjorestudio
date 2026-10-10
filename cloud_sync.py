@@ -4,7 +4,10 @@ from pathlib import Path
 from tkinter import ttk,messagebox
 import tkinter as tk
 
-FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed']
+DEFAULT_URL='https://otuemdgmymgognzghmnu.supabase.co'
+DEFAULT_API='sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu'
+
+FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','distribution']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
  if str(values.get('average_speed','')).strip() not in ['', '-']:values['average_speed']=float(values['average_speed'])
@@ -46,6 +49,8 @@ def request(url,api,token=None,body=None):
    error=json.load(e);msg=error.get('msg') or error.get('message') or error.get('error_description') or f'HTTP {e.code}'
   except Exception:msg=f'HTTP {e.code}'
   raise APIError(msg,e.code,error.get('code','') if isinstance(error,dict) else '') from None
+
+class LoginRequired(ValueError):pass
 
 class APIError(ValueError):
  def __init__(self,message,status,code=''):
@@ -91,15 +96,20 @@ class Receiver:
    rows=request(cfg['url']+'/rest/v1/ysk_memberships?select=organization_id,role,active,display_name&user_id=eq.'+cfg['session']['user']['id'],cfg['api'],cfg['session']['access_token'])
   except APIError as e:
    if e.status==404 and e.code in ['PGRST205','42P01']:return None
+   if e.status in (401,403):raise LoginRequired('Logg inn på nytt for å få tilgang.') from None
    raise
-  if not rows or not rows[0]['active']:raise ValueError('Du har ikke aktiv tilgang til skolen.')
+  if not rows or not rows[0]['active']:raise LoginRequired('Du har ikke aktiv tilgang til skolen.')
   return rows[0]
  def session(self):
   cfg=self.load()
-  if not cfg:raise ValueError('Logg inn under Telefon / sky først.')
+  if not cfg:raise LoginRequired('Logg inn først.')
   s=cfg['session']
   if s.get('expires_at',0)<=time.time()+90:
-   cfg['session']=request(cfg['url']+'/auth/v1/token?grant_type=refresh_token',cfg['api'],body={'refresh_token':s['refresh_token']});self.save(cfg)
+   try:cfg['session']=request(cfg['url']+'/auth/v1/token?grant_type=refresh_token',cfg['api'],body={'refresh_token':s['refresh_token']})
+   except APIError as e:
+    if e.status in (400,401,403):raise LoginRequired('Innloggingen er utløpt. Logg inn på nytt.') from None
+    raise
+   self.save(cfg)
   return cfg
  def admin(self,action,**body):
   with self.lock:
@@ -108,6 +118,13 @@ class Receiver:
    except APIError as e:
     if e.status == 404:raise ValueError('Skole/admin er klargjort i pakken, men må aktiveres i Supabase før brukeradministrasjon virker.') from None
     raise
+ def logout(self):
+  with self.lock:
+   try:
+    cfg=self.load()
+    if cfg:request(cfg['url']+'/auth/v1/logout?scope=local',cfg['api'],cfg['session']['access_token'],{})
+   except Exception:pass
+   finally:self.path.unlink(missing_ok=True)
  def remote(self,id):
   with self.store.conn() as c:r=c.execute('SELECT row FROM cloud_versions WHERE id=?',(id,)).fetchone()
   return json.loads(r[0]) if r else None
@@ -155,7 +172,11 @@ class Receiver:
    if not cfg:return 0,[],False
    s=cfg['session'];url=cfg['url'];api=cfg['api']
    if s.get('expires_at',0)<=time.time()+90:
-    s=request(url+'/auth/v1/token?grant_type=refresh_token',api,body={'refresh_token':s['refresh_token']});cfg['session']=s;self.save(cfg)
+    try:s=request(url+'/auth/v1/token?grant_type=refresh_token',api,body={'refresh_token':s['refresh_token']})
+    except APIError as e:
+     if e.status in (400,401,403):raise LoginRequired('Innloggingen er utløpt. Logg inn på nytt.') from None
+     raise
+    cfg['session']=s;self.save(cfg)
    member=self.membership(cfg);legacy=url+'|'+s['user']['id'];self.bind(url+'|school:'+member['organization_id'] if member else legacy,legacy);allrows=[];last=None
    with self.store.conn() as c:needs_full=bool(c.execute('SELECT 1 FROM cloud_seen WHERE id NOT IN (SELECT id FROM cloud_versions) LIMIT 1').fetchone())
    while True:
@@ -165,6 +186,8 @@ class Receiver:
     rows=request(url+'/rest/v1/ysk_trips?'+urllib.parse.urlencode(params),api,s['access_token']);allrows.extend(rows)
     if len(rows)<500:break
     last=rows[-1]
+   from course_setup import import_courses
+   if member:import_courses(self.store,request(url+'/functions/v1/ysk-admin',api,s['access_token'],{'action':'course_setup_list'})['rows'])
    n,errors=self.import_rows(allrows,force)
    if allrows:cfg['cursor']=allrows[-1]['updated_at'];self.save(cfg)
    with self.store.conn() as c:persistent=[row[0] for row in c.execute('SELECT message FROM cloud_conflicts ORDER BY id')]
@@ -172,20 +195,21 @@ class Receiver:
 
 class CloudPanel:
  def __init__(self,app,path):
-  self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False
-  f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Telefon / sky')
-  ttk.Label(f,text='Telefon ↔ sky ↔ klasserom',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
-  ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk skolens Supabase-prosjekt og din egen brukerkonto. Etter skoleaktivering hentes turene fra alle skolens lærere.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
-  self.fields={}
-  for i,(k,label) in enumerate([('url','Supabase Project URL'),('api','Publishable / anon key'),('email','E-post'),('password','Passord')],start=2):
-   ttk.Label(f,text=label).grid(row=i,column=0,sticky='w',padx=(0,15),pady=10);v=tk.StringVar(value='https://otuemdgmymgognzghmnu.supabase.co' if k=='url' else 'sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu' if k=='api' else '');self.fields[k]=v;ttk.Entry(f,textvariable=v,width=65,show='•' if k=='password' else '').grid(row=i,column=1,sticky='ew')
-  ttk.Button(f,text='Logg inn og koble til',style='Accent.TButton',command=self.connect).grid(row=6,column=1,sticky='w',pady=15)
+  self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False;self.account_label=''
+  f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Innlogging / sky');self.frame=f
+  ttk.Label(f,text='Konto og sky',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
+  ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk e-post og passord fra administratoren. Skole og avdeling følger kontoen automatisk.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
+  self.fields={'url':tk.StringVar(value=DEFAULT_URL),'api':tk.StringVar(value=DEFAULT_API),'password':tk.StringVar()}
+  for i,(k,label) in enumerate([('email','E-post')],start=2):
+   ttk.Label(f,text=label).grid(row=i,column=0,sticky='w',padx=(0,15),pady=10);v=tk.StringVar(value='https://otuemdgmymgognzghmnu.supabase.co' if k=='url' else 'sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu' if k=='api' else '');self.fields[k]=v;ttk.Entry(f,textvariable=v,width=65,state='readonly').grid(row=i,column=1,sticky='ew')
+  ttk.Button(f,text='Logg ut',command=self.logout).grid(row=6,column=1,sticky='w',pady=15)
   ttk.Button(f,text='Hent turer nå',command=self.sync).grid(row=7,column=1,sticky='w',pady=8)
   ttk.Button(f,text='Bruk telefonens versjoner ved konflikt',command=self.force).grid(row=7,column=0,sticky='w',pady=8)
   self.status=tk.StringVar(value='Ikke koblet til. Android-appen kan fortsatt lagre turer lokalt.');ttk.Label(f,textvariable=self.status,wraplength=850).grid(row=8,column=0,columnspan=2,sticky='w',pady=15)
-  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nOppsettsveiledning: cloud/OPPSETT.txt i pakken.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
+  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nSkole og avdeling tildeles av administrator.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
   try:
    cfg=self.receiver.load()
+   if not cfg:app.nb.select(f)
    if cfg:
     for k in ['url','api','email']:self.fields[k].set(cfg[k])
     self.status.set('Tilkoblet. Venter på første henting.');self.sync()
@@ -195,13 +219,22 @@ class CloudPanel:
   if self.busy:return
   self.busy=True;self.status.set('Kobler til …')
   def work():
-   try:self.queue.put(('ok',fn()))
-   except Exception as e:self.queue.put(('error',str(e)))
+   try:
+    result=fn()
+    if self.receiver.load():
+     info=self.receiver.admin('me');self.account_label=(info.get('school') or {}).get('name','')+(' · '+info['division']['name'] if info.get('division') else '')
+    self.queue.put(('ok',result))
+   except Exception as e:self.queue.put(('locked' if isinstance(e,LoginRequired) or isinstance(e,APIError) and e.status==401 else 'error',str(e)))
   threading.Thread(target=work,daemon=True).start()
  def connect(self):
   args=[self.fields[k].get() for k in ['url','api','email','password']];self.fields['password'].set('')
   def work():self.receiver.connect(*args);return self.receiver.sync()
   self.launch(work)
+ def logout(self):
+  if self.busy:return
+  self.busy=True;self.status.set('Logger ut …')
+  def work():self.receiver.logout();self.queue.put(('loggedout',None))
+  threading.Thread(target=work,daemon=True).start()
  def force(self):
   if self.busy:return
   if messagebox.askyesno('Bruk telefonens versjoner','Erstatte PC-endringer med versjonene i skyen? En sikkerhetskopi tas først.'):
@@ -215,10 +248,12 @@ class CloudPanel:
   try:
    while True:
     kind,result=self.queue.get_nowait();self.busy=False
+    if kind in ('locked','loggedout'):
+     self.app.lock();return
     if kind=='error':self.status.set('Venter: '+result);self.app.cloud_waiting=True
     else:
      n,errors,connected=result
-     self.status.set(('Hentet '+str(n)+' nye/endrede turer. Oppdatert '+time.strftime('%H:%M:%S') if connected else 'Ikke koblet til.')+ ('\n'+'\n'.join(errors[:6]) if errors else ''));
+     self.status.set(('Hentet '+str(n)+' nye/endrede turer. Oppdatert '+time.strftime('%H:%M:%S') if connected else 'Ikke koblet til.')+(' · '+self.account_label if connected and self.account_label else '')+ ('\n'+'\n'.join(errors[:6]) if errors else ''));
      self.app.cloud_waiting=not connected
      if connected:self.app.last_cloud_update=time.strftime('%H:%M:%S')
      self.app.refresh()

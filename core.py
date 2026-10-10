@@ -60,6 +60,10 @@ class Store:
   if not d['stops'].is_integer(): raise ValueError('Stopp må være et heltall.')
   for k in QUAL:
    if d.get(k) not in ['Bra','Middel','Svak']:raise ValueError('Velg Bra, Middel eller Svak.')
+  if 'distribution' in d:
+   if d['trip']!=4:raise ValueError('Distribusjonslogg tilhører transportoppdrag 1 (tur 4).')
+   from distribution import validate_run
+   d['distribution']=validate_run(d['distribution'])
   d['notes']=str(d.get('notes',''))[:2000]
   d['updated']=datetime.datetime.now().isoformat(timespec='seconds')
   d['id']=str(d.get('id') or uuid.uuid4())

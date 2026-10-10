@@ -64,6 +64,9 @@ jobs:
           node cloud/functions/ysk-admin/test.mjs
           node cloud/functions/ysk-admin/test_updates.mjs
           node cloud/functions/ysk-admin/test_trips.mjs
+          node cloud/functions/ysk-admin/test_distribution.mjs
+          node cloud/functions/ysk-admin/test_feedback.mjs
+          node cloud/functions/ysk-admin/test_schools.mjs
           node cloud/functions/ysk-publish/test.mjs
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Restore private signing key
@@ -86,6 +89,10 @@ jobs:
           mkdir -p timer-test
           javac -d timer-test android/src/no/talappen/ysk/TripTimer.java android/tests/TripTimerTest.java
           java -cp timer-test TripTimerTest
+      - name: Test distribution stops and continuous clock
+        run: |
+          javac -encoding UTF-8 -d timer-test android/src/no/talappen/ysk/DistributionRun.java android/tests/DistributionRunTest.java
+          java -cp timer-test DistributionRunTest
       - name: Test stop counter
         run: |
           javac -d timer-test android/src/no/talappen/ysk/StopCounter.java android/tests/StopCounterTest.java

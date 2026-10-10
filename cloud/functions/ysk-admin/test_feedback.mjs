@@ -1,0 +1,17 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('./feedback.ts',import.meta.url),'utf8').replaceAll('export function','function').replaceAll('export async function','async function');const c={fetch:()=>{throw Error('Unexpected external send');},AbortSignal,Date,encodeURIComponent};vm.createContext(c);vm.runInContext(source,c);
+const user={user_id:'verified-user',organization_id:'verified-school',role:'teacher'},admin={...user,role:'admin'},id='11111111-1111-4111-8111-111111111111',row={id,organization_id:user.organization_id,owner_id:user.user_id,kind:'bug',title:'Brakes',body:'Broken',author:'Teacher',platform:'android',version:'2',device:'Phone',delivery:'pending'};
+const calls=[];let stored={...row};let hook='https://discord.com/api/webhooks/123/token';let created=true;let deliveries=0;
+const server=async(path,method='GET',body)=>{calls.push({path,method,body});if(path.includes('rpc/'))return {row:{...row},created};if(path.includes('ysk_feedback_hooks'))return [{kind:'bug',url:hook}];if(method==='PATCH'){stored={...stored,...body};return [stored];}return [stored];};
+const send=async(url,options)=>{deliveries++;assert.equal(url,hook+'?wait=true');assert.equal(options.redirect,'error');assert.deepEqual(JSON.parse(options.body).allowed_mentions,{parse:[]});return {ok:true};};
+for(const action of ['feedback_list','feedback_hooks_get','feedback_hooks_save','feedback_status','feedback_retry']){const r=await c.feedbackAction({action},user,server,send);assert.equal(r.status,403);}assert.equal(calls.length,0);
+let result=await c.feedbackAction({action:'feedback_submit',id,p_user:'attacker',organization_id:'attacker'},user,server,send);assert.equal(result.data.id,id);assert.equal(calls[0].body.p_user,'verified-user');assert.equal(stored.delivery,'sent');assert.equal(deliveries,1);
+created=false;await c.feedbackAction({action:'feedback_submit',id},user,server,send);assert.equal(deliveries,1);
+created=true;await c.feedbackAction({action:'feedback_submit',id},user,server,async()=>{throw Error('Sensitive webhook URL must not be returned');});assert.equal(stored.delivery,'failed');assert(!stored.delivery_error.includes('Sensitive'));
+result=await c.feedbackAction({action:'feedback_hooks_get'},admin,server,send);assert.equal(result.data.hooks.find(h=>h.kind==='bug').enabled,true);assert(!JSON.stringify(result).includes('token'));
+for(const url of ['http://discord.com/api/webhooks/1/a','https://localhost/x','https://discord.com.evil/api/webhooks/1/a','https://discord.com/api/webhooks/1/a?redirect=evil'])assert.equal(c.feedbackHook(url),false);
+calls.length=0;await c.feedbackAction({action:'feedback_list',organization_id:'attacker'},admin,server,send);assert(calls[0].path.includes('organization_id=eq.verified-school'));assert(!calls[0].path.includes('attacker'));
+result=await c.feedbackAction({action:'feedback_status',id,status:'bad'},admin,server,send);assert.equal(result.status,400);
+result=await c.feedbackAction({action:'feedback_list',offset:-1},admin,server,send);assert.equal(result.status,400);
+await c.feedbackAction({action:'feedback_hooks_save',kind:'suggestion',url:''},admin,server,send);assert.equal(calls.at(-1).body.organization_id,'verified-school');
+console.log('Feedback: verified identity, admin access, school scope, separate hook routing, no token exposure, duplicates, Discord failure and mention suppression passed.');

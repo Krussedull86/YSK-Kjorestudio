@@ -12,6 +12,14 @@ Installer APK over eksisterende app. Kjør den separate `YSK_Kjorestudio.exe` p�
 
 Én liten menylinje; status og innhold ruller, uten fast bunn. Tidtakeren ligger øverst i registreringen. **Start** fyller inn dato/starttid; **Stopp** fyller inn kjøretid. **Fortsett** gjenopptar samme måling. Meny → **Fortsett tur** åpner utkastet etter appbytte. Tidtakingen fortsetter med skjermen av. Nullstilling av klokken beholder manuelt registrert tid. Stopp før lagring.
 
+## Distribusjon (dev 1.9.0)
+
+Admin velger **Kursoppsett** på PC eller under **Turer, kurs og biler → Kurs** på Android. Angi antall aktive turer slik at tur 4 er aktiv, **antall distribusjonsstopp (1–30)** og **forventet totaltid i minutter**. 0 stopp slår av stoppplanen. Forventet totaltid vises kun som informasjon.
+
+Android: velg sjåfør, kurs, bil og **Transportoppdrag 1 (distribusjon)**. Trykk **Start distribusjonsoppdrag**, deretter **Rygget til rampe** eller **Avbryt stopp** for hvert stopp. Hver rampe har valgfri kommentar som kan endres senere. Til rampe registrerer tidspunktet før kommentaren skrives. Avbrudd kan ha en grunn. **Rygget til rampe** og **Avbryt stopp** finnes også i appmenyen og i Androids nedtrekkbare tidtakingsvarsel. I varselet registreres avbrudd uten grunn; du kan bruke skjemaet for å angi grunn. Etter alle stopp vises **Avslutt ved skolen**. Klokken fortsetter på returen; totaltiden gjelder skole til skole. Klokken inkluderer lasting, venting og pauser og fortsetter mens appen er lukket. Meny → **Fortsett tur** gjenåpner utkastet. Etter alle stopp: **Tilbake ved skolen: Avslutt tur**, fyll øvrige målinger/vurderinger og **Lagre tur**. Tidsplanen kopieres ved Start og endres ikke av senere kursendringer.
+
+Stopploggen viser tid siden forrige registrerte stopp, totalt fra start, status for hvert stopp. Avbrutte stopp beholdes i loggen og teller ikke som gjennomførte leveringsstopp. **Unødige stopp** er en separat måling. På PC: åpne turen og velg **Vis distribusjonsstopp**, eller bruk stopptabellen fra elevdetaljene i klasseromsvisningen/storskjermen.
+
 ## Rediger og slett
 
 Android: **Mine turer → Administrer turer, kurs og biler**. PC: fanen **Turer, kurs og biler → Hent fra sky**. Velg tur, kurs eller bil og bruk redigering eller sletting. Kurs-/bilnavn endres på alle aktive tilhørende turer. Sletting av kurs eller bil flytter tilhørende turer til papirkurven, med antallet vist før bekreftelse. Turene kan gjenopprettes enkeltvis.
@@ -39,3 +47,24 @@ Android bygges med JDK 17 og SDK 35 gjennom `android/build_android.py`. Windows 
 
 ### Separate dev-oppdateringer
 Windows-filer bygger bare Windows; filer under `android/` bygger bare Android. Felles sky- og byggeoppsett bygger begge. Dokumentasjon alene starter ingen bygg. I GitHub Actions → YSK dev → Run workflow kan du velge `auto`, `windows`, `android` eller `both`. En push med `[windows-only]` eller `[android-only]` i siste commit-tittel velger eksplisitt bare den plattformen. Øk `BUILD` i `version.py` før en utgivelse; byggnummeret er en felles, stigende utgivelsessekvens. Android-manifestet får utgivelsens versjon under bygging. Plattformen som ikke publiseres beholder forrige oppdatering og versjon.
+
+### Kursoppsett og sammenligning (dev)
+Admin velger kursnavn og 1–5 aktive turer via Kursoppsett på PC eller Administrer → Kurs → Kursoppsett på Android. Turene aktiveres fra 1 til valgt antall; eksisterende registreringer beholdes. Gamle kurs har fem aktive turer. Kursoppsettet hentes ved synkronisering og er tilgjengelig uten nett etterpå. Windows kan også ha lokale kursoppsett uten skykonto. Klasserommet viser turenes navn; Sammenlign turer velger hvilke registreringer som inngår i historikken, og Sammenlign fra på storskjermen velger startturen.
+
+## Skoler og avdelinger (dev 1.8.0)
+Vanlige brukere logger inn med e-post og passord. Prosjektadresse og publishable key er innebygd; service key ligger kun på serveren. Oppstart viser innlogging og krever godkjent, aktiv konto før programmet åpnes. Etter godkjent innlogging er lokal lagring uten nett fortsatt tilgjengelig.
+
+Under **Admin / lærere** kan admin opprette skoler, opprette avdelinger, endre navn og tildele en skole og valgfri avdeling når en bruker opprettes. Eksisterende brukere kan også tildeles skole/avdeling. Admin administrerer egen skole og nye skoler de selv oppretter. Ingen tilgang til andre skoler gis automatisk. Avdeling er tilhørighet innen skolen; kurs og klasserom deles på skolenivå.
+
+Tidligere turer beholdes i opprinnelig skole. Administratorer kan få ny avdeling, men flyttes ikke mellom skoler; opprett en ny administratorkonto i den nye skolen. Etter skolebytte må lokale data holdes separat: PC og Android stopper synkronisering ved endret skoletilknytning, slik at gamle utkast ikke sendes til ny skole. Bruk en separat PC-database/Android-installasjon for ny skole.
+
+## Påkrevd innlogging (dev 1.8.1)
+PC-programmet bygger ikke registrerings-, admin- eller klasseromsvisning og starter ikke lokal mobilserver før serveren har godkjent kontoen. Android sperrer registrering, resultater, meny og tilbakeknapp før innlogging. Lagret kryptert økt kontrolleres automatisk ved oppstart; ugyldig økt gir ingen tilgang. Oppstart/kontokontroll krever nett. Etter innlogging kan lokale turer lagres mens nettet er borte. Logg ut returnerer til innlogging og beholder lokale turer og utkast.
+
+## Tilbakemeldinger og feilmeldinger (dev 1.10.0)
+
+Android: meny → **Tilbakemelding / feilmelding**. PC: fanen **Tilbakemelding**. Velg type, skriv tittel og melding og send. Utkast beholdes ved nettfeil. Navn, programversjon og enhetsinformasjon følger meldingen.
+
+PC-admin: **Admin / lærere → Tilbakemeldinger / feilmeldinger**. Android-admin har samme innboks fra læreradministrasjonen. Admin kan merke Ny, Under behandling eller Ferdig, lese hele meldingen og se Discord-leveringen. Innboksen tilhører brukerens egen skole.
+
+I innboksen: **Discord · 2 webhooks**. Lim inn en Discord-webhook for **Tilbakemelding / forslag** og en for **Feilmelding**. Tomt felt beholder eksisterende; Deaktiver slår den av. Adressene lagres på serveren og leses ikke tilbake til klienten. Uten webhooks fungerer admininnboksen som vanlig. Sending til Discord feiler uavhengig av lagring; **Prøv Discord på nytt** brukes av admin. Ingen Discord-omtaler/pinger sendes. Maks ti nye meldinger per bruker per time.

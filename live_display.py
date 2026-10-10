@@ -1,93 +1,104 @@
+"""Compact classroom list and selected-student analysis."""
 import tkinter as tk
-import time,math,datetime
-from classroom_views import MODES,projection,value_text,statistics,LABELS,RATING
-from core import metrics,QUAL
-BG='#f3f6fa';PANEL='#ffffff';EDGE='#dfe7ef';TEAL='#087f72';TEXT='#183047';MUTED='#61778c';GOLD='#9d6717';RED='#bb414e';BLUE='#346fd2'
+from tkinter import ttk
+from classroom_analysis import analyse,value,percent
+from core import QUAL
+from course_setup import trip_name
+BG='#081c2b';PANEL='#102b3e';TEXT='#edf5fb';MUTED='#a4b9c9';TEAL='#32d4bf';COLORS=['#3898ff',TEAL,'#ffc84e']
+LABELS=['Trafikksikkerhet','Fartsavpassing','Fartsøkning','Komfort']
 class LiveDisplay:
  def __init__(self,app,window):
-  self.app=app;self.window=window;self.mode='Samlet poeng';self.baseline='Første tur';self.page=0;self.auto=False;self.last_flip=time.monotonic();self.dwell=18;self.focus=None;self.focus_trip=None
-  self.canvas=tk.Canvas(window,bg=BG,highlightthickness=0);self.canvas.pack(fill='both',expand=True)
-  self.canvas.bind('<Configure>',lambda e:self.paint());window.bind('<Escape>',lambda e:window.destroy());window.bind('<Right>',lambda e:self.move(1));window.bind('<Left>',lambda e:self.move(-1));window.bind('<space>',lambda e:self.toggle());window.bind('<F11>',lambda e:app.fill_screen(window))
-  self.timer=window.after(100,self.tick);window.bind('<Destroy>',self.destroyed,add='+')
- def destroyed(self,event):
-  if event.widget==self.window:
+  self.app=app;self.window=window;self.mode='Optimaltur 1–2–3';self.focus=None;self.signature=None
+  window.configure(bg=BG)
+  self.frame=tk.Frame(window,bg=BG);self.frame.pack(fill='both',expand=True,padx=16,pady=12)
+  top=tk.Frame(self.frame,bg=BG);top.pack(fill='x',pady=(0,12))
+  tk.Label(top,text='YSK Kjørestudio · Klasserom',bg=BG,fg=TEXT,font=('Segoe UI',22,'bold')).pack(side='left')
+  self.course=tk.StringVar(value=app.filters['course'][0].get());self.vehicle=tk.StringVar(value=app.filters['vehicle'][0].get());self.view=tk.StringVar(value='Optimaltur 1–2–3')
+  for label,var in [('Kurs',self.course),('Bil',self.vehicle),('Visning',self.view)]:
+   tk.Label(top,text=label,bg=BG,fg=MUTED).pack(side='left',padx=(16,5));box=ttk.Combobox(top,textvariable=var,state='readonly',width=24 if label=='Visning' else 16);box.pack(side='left');box.bind('<<ComboboxSelected>>',lambda e:self.paint(True));setattr(self,'box_'+label,box)
+  self.box_Visning['values']=['Optimaltur 1–2–3',trip_name(4),trip_name(5)]
+  split=tk.PanedWindow(self.frame,orient='horizontal',bg=BG,sashwidth=8);split.pack(fill='both',expand=True)
+  left=tk.Frame(split,bg=BG);right=tk.Frame(split,bg=PANEL);split.add(left,minsize=500,stretch='always');split.add(right,minsize=380,stretch='always')
+  style=ttk.Style();style.configure('Classroom.Treeview',background=PANEL,fieldbackground=PANEL,foreground=TEXT,rowheight=35,font=('Segoe UI',12));style.configure('Classroom.Treeview.Heading',font=('Segoe UI',12,'bold'));style.map('Classroom.Treeview',background=[('selected','#135967')],foreground=[('selected',TEXT)])
+  self.tree=ttk.Treeview(left,style='Classroom.Treeview',show='headings',selectmode='browse');scroll=ttk.Scrollbar(left,command=self.tree.yview);self.tree.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');self.tree.pack(fill='both',expand=True);self.tree.bind('<<TreeviewSelect>>',self.select);self.tree.bind('<Double-1>',lambda e:self.details())
+  self.canvas=tk.Canvas(right,bg=PANEL,highlightthickness=0);self.canvas.pack(fill='both',expand=True);self.canvas.bind('<Configure>',lambda e:self.draw());self.canvas.bind('<Button-1>',lambda e:self.details() if e.y>self.canvas.winfo_height()-45 else None)
+  self.footer=tk.Label(self.frame,bg=BG,fg=MUTED,anchor='w',font=('Segoe UI',10));self.footer.pack(fill='x',pady=(8,0))
+  window.bind('<Escape>',lambda e:window.destroy());window.bind('<F11>',lambda e:app.fill_screen(window));window.bind('<Destroy>',self.destroyed,add='+');self.paint(True);self.timer=window.after(1000,self.tick)
+ def destroyed(self,e):
+  if e.widget==self.window:
    try:self.window.after_cancel(self.timer)
-   except tk.TclError:pass
- def set_mode(self,mode):
-  if mode not in MODES:mode='Samlet poeng'
-  self.mode=mode;self.page=0;self.last_flip=time.monotonic();self.paint()
- def toggle(self):self.auto=not self.auto;self.last_flip=time.monotonic();self.paint()
- def rows(self):return projection(self.app.rows,self.app.store.settings(),self.mode,self.baseline,**{k:v.get() for k,(v,box) in self.app.filters.items()})
- def move(self,step):self.page=(self.page+step)%max(1,math.ceil(len(self.rows())/8));self.last_flip=time.monotonic();self.paint()
+   except (tk.TclError,AttributeError):pass
  def tick(self):
-  if not self.window.winfo_exists():return
-  if self.auto and time.monotonic()-self.last_flip>=self.dwell:
-   pages=max(1,math.ceil(len(self.rows())/8))
-   if self.page+1>=pages:self.page=0;self.mode=MODES[(MODES.index(self.mode)+1)%len(MODES)]
-   else:self.page+=1
-   self.last_flip=time.monotonic()
-  self.paint();self.timer=self.window.after(1000,self.tick)
- def menu(self,event,key):
-  menu=tk.Menu(self.window,tearoff=False,bg='white',fg=TEXT,font=('Segoe UI',12))
-  choices=['Første tur','1','2','3','4','5'] if key=='baseline' else list(self.app.filters[key][1]['values'])
-  for value in choices:
-   def choose(value=value):
-    if key=='baseline':self.baseline=value
-    else:self.app.filters[key][0].set(value);self.app.refresh()
-    self.page=0;self.paint()
-   menu.add_command(label=('Tur '+value if key=='baseline' and value!='Første tur' else value),command=choose)
-  try:menu.tk_popup(event.x_root,event.y_root)
-  finally:menu.grab_release()
- def paint(self):
-  if not self.window.winfo_exists():return
-  c=self.canvas;c.delete('all');w=max(c.winfo_width(),800);h=max(c.winfo_height(),500);s=min(w/1600,h/900);font=lambda n:('Segoe UI',max(9,int(n*s)),'bold')
-  def txt(x,y,text,size=18,color=TEXT,anchor='nw',width=None):return c.create_text(x,y,text=text,fill=color,font=font(size),anchor=anchor,width=width)
-  def rect(x,y,x2,y2,color=PANEL):return c.create_rectangle(x,y,x2,y2,fill=color,outline='')
-  def button(x,y,width,label,fn,selected=False,color=None):
-   tag='b'+str(x)+str(y);r=rect(x,y,x+width,y+34*s,color or (TEAL if selected else PANEL));t=txt(x+10*s,y+8*s,label,13,'white' if selected else TEXT);c.addtag_withtag(tag,r);c.addtag_withtag(tag,t);c.tag_bind(tag,'<Button-1>',fn)
-  margin=26*s;rows=self.rows();pages=max(1,math.ceil(len(rows)/8));self.page%=pages;visible=rows[self.page*8:(self.page+1)*8]
-  txt(margin,18*s,'YSK / FELLES GJENNOMGANG',14,TEAL);txt(margin,44*s,self.mode,32);txt(w-margin,21*s,datetime.datetime.now().strftime('%H:%M'),24,MUTED,'ne')
-  for i,mode in enumerate(MODES):button(w*.43+(i%4)*(w*.14),43*s+(i//4)*40*s,w*.135,mode,lambda e,mode=mode:self.set_mode(mode),mode==self.mode)
-  for i,(key,label) in enumerate([('course','Kurs'),('vehicle','Bil'),('trip','Tur'),('baseline','Sammenlign fra')]):
-   value=self.baseline if key=='baseline' else self.app.filters[key][0].get();button(margin+i*(w-2*margin)/4,160*s,(w-2*margin)/4-10*s,label+': '+value+' ▾',lambda e,key=key:self.menu(e,key))
-  stats=statistics(rows);cards=[('ELEVER / TURER',f"{stats['students']} / {stats['trips']}"),('SNITT FORBRUK','—' if stats['fuel'] is None else f"{stats['fuel']:.2f} L/10 km"),('SNITT FORBEDRING','—' if stats['improvement'] is None else f"{stats['improvement']:+.1f}%"),('FULLFØRT TUR 5',str(stats['complete']))]
-  for i,(label,value) in enumerate(cards):
-   x=margin+i*(w-2*margin)/4;rect(x,207*s,x+(w-2*margin)/4-10*s,271*s);txt(x+14*s,218*s,label,12,MUTED);txt(x+14*s,239*s,value,22,TEAL)
-  top=297*s;bottom=h-96*s;left=w*.64;side=left+19*s;row_h=(bottom-top)/8
-  txt(margin,top-12*s,'PLASS / ELEV',12,MUTED);txt(left*.62,top-12*s,self.mode.upper(),12,MUTED)
-  for i,d in enumerate(visible):
-   y=top+15*s+i*row_h;tag='student'+str(i);active=(d['course'],d['vehicle'],d['driver'])==self.focus;new=time.monotonic()-self.app.live_changes.get(d['id'],0)<25
-   r=rect(margin,y,left,y+row_h-5*s,'#e7f4f0' if active or new else PANEL);c.addtag_withtag(tag,r)
-   place=d['view_place'];txt(margin+12*s,y+7*s,'—' if place is None or self.mode=='Siste turer' else '#'+str(place),22,TEAL)
-   txt(margin+78*s,y+5*s,d['driver'][:28],19,width=left*.43);txt(margin+78*s,y+30*s,f"{d['course']} · {d['vehicle']} · Tur {d['trip']}"+(' · NY' if new else ''),11,MUTED,width=left*.48)
-   txt(left*.62,y+6*s,value_text(d,self.mode),21,TEAL if self.mode!='Forbedring' or (d['improvement'] or 0)>=0 else RED,width=left*.36)
-   secondary=f"{d['score']:.1f} samlet poeng" if self.mode!='Samlet poeng' else ('Første tur' if d['improvement'] is None else f"{d['improvement']:+.1f}% forbedring")
-   txt(left*.62,y+32*s,secondary,11,MUTED)
-   for item in c.find_enclosed(margin,y,left,y+row_h-5*s):c.addtag_withtag(tag,item)
-   c.tag_bind(tag,'<Button-1>',lambda e,d=d:self.select(d))
-  if not rows:txt(margin,top+80*s,'Venter på første registrering …\nVelg kurs eller registrer en tur.',26,width=left-margin)
-  focus=next((d for d in rows if (d['course'],d['vehicle'],d['driver'])==self.focus),None) or (visible[0] if visible else None);rect(side,top,w-margin,bottom+10*s)
-  if focus:
-   x=side+18*s;sw=w-margin-x-14*s;history=sorted([r for r in self.app.rows if (r['course'],r['vehicle'],r['driver'])==(focus['course'],focus['vehicle'],focus['driver'])],key=lambda r:r['trip']);chosen=next((d for d in history if d['trip']==self.focus_trip),None) or focus
-   txt(x,top+14*s,'ELEVENS TURER · KLIKK FOR DETALJER',11,TEAL);txt(x,top+40*s,focus['driver'],26,width=sw)
-   for n in range(1,6):
-    cx=x+(n-1)*sw/5;exists=n in focus['completed'];button(cx,top+79*s,sw/5-5*s,str(n)+(' ✓' if exists else ''),lambda e,n=n,exists=exists:self.choose_trip(n) if exists else None,n==chosen['trip'])
-   chartkey='tid' if self.mode=='Tid per km' else 'stopp' if self.mode=='Stopp per km' else 'forbruk10';title={'tid':'MINUTTER PER KM','stopp':'STOPP PER KM','forbruk10':'LITER PER 10 KM'}[chartkey]
-   vals=[metrics(d)[chartkey] for d in history];hi=max(vals+[.01]);chart_top=top+143*s;chart_bottom=top+241*s;pts=[]
-   txt(x,top+123*s,title,11,MUTED)
-   for j in range(4):c.create_line(x,chart_top+j*(chart_bottom-chart_top)/3,x+sw,chart_top+j*(chart_bottom-chart_top)/3,fill=EDGE)
-   for d,value in zip(history,vals):
-    px=x+14*s+(d['trip']-1)*(sw-28*s)/4;py=chart_bottom-value/hi*(chart_bottom-chart_top-12*s);pts.extend([px,py]);c.create_oval(px-4*s,py-4*s,px+4*s,py+4*s,fill=TEAL,outline='');txt(px,py-7*s,f'{value:.2f}',10,TEAL,'s')
-   if len(pts)>2:c.create_line(*pts,fill=TEAL,width=max(2,2*s))
-   m=metrics(chosen);y=chart_bottom+20*s;txt(x,y,f"TUR {chosen['trip']} · {chosen.get('date','')}",12,TEAL)
-   txt(x,y+24*s,f"{chosen['minutes']:.2f} min  ·  {chosen['km']:.1f} km  ·  {m['fart']:.1f} km/t",13,width=sw)
-   txt(x,y+46*s,f"{chosen['liters']:.2f} liter totalt  ·  {int(chosen['stops'])} stopp",13,width=sw)
-   for j,q in enumerate(QUAL):
-    color=TEAL if chosen[q]=='Bra' else GOLD if chosen[q]=='Middel' else RED;txt(x,y+(74+j*23)*s,LABELS[q],12,MUTED);txt(x+sw,y+(74+j*23)*s,'Middels' if chosen[q]=='Middel' else chosen[q],12,color,'ne')
-   txt(x,bottom-24*s,'Lærer: '+(chosen.get('teacher') or '—'),11,MUTED,width=sw)
-  sync=getattr(self.app,'last_cloud_update',None);state='Sky hentet '+sync if sync else 'Lokale data';state='Venter på sky · viser lagrede data' if getattr(self.app,'cloud_waiting',False) else state
-  txt(margin,h-60*s,f"{state} · Side {self.page+1}/{pages} · "+('Automatisk gjennomgang' if self.auto else 'Gjennomgang på dine premisser'),12,MUTED)
-  txt(margin,h-34*s,'Plass gjelder samme kurs, bil og tur. Fart gir ingen poeng. Positiv forbedring = redusert forbruk.',11,MUTED)
-  button(w-390*s,h-66*s,62*s,'←',lambda e:self.move(-1));button(w-319*s,h-66*s,62*s,'→',lambda e:self.move(1));button(w-244*s,h-66*s,215*s,'Pause' if self.auto else 'Start automatikk',lambda e:self.toggle(),self.auto)
- def choose_trip(self,n):self.focus_trip=n;self.auto=False;self.paint()
- def select(self,d):self.focus=(d['course'],d['vehicle'],d['driver']);self.focus_trip=d['trip'];self.auto=False;self.paint()
+  if self.window.winfo_exists():self.paint();self.timer=self.window.after(1000,self.tick)
+ def source(self):return self.app.store.all(include_unscored=True)
+ def paint(self,force=False):
+  rows=self.source();signature=repr((rows,self.app.store.settings(),self.course.get(),self.vehicle.get(),self.view.get()))
+  if not force and signature==self.signature:return
+  self.signature=signature
+  self.box_Kurs['values']=['Alle']+sorted({d['course'] for d in rows});self.box_Bil['values']=['Alle']+sorted({d['vehicle'] for d in rows})
+  self.optimal=self.view.get()=='Optimaltur 1–2–3'
+  if self.optimal:
+   self.data=analyse(rows,self.app.store.settings(),self.course.get(),self.vehicle.get());columns=['Elev','Bil','Tur 1','Tur 2','Tur 3','Endring']
+  else:
+   n=4 if self.view.get()==trip_name(4) else 5;self.data=[d for d in rows if d['trip']==n and (self.course.get()=='Alle' or d['course']==self.course.get()) and (self.vehicle.get()=='Alle' or d['vehicle']==self.vehicle.get())];self.data.sort(key=lambda d:(d['driver'].casefold(),d.get('date','')));columns=['Elev','Bil','Dato','Tid','Distanse','Status']
+  self.tree['columns']=columns
+  for name in columns:self.tree.heading(name,text=name);self.tree.column(name,width=155 if name=='Elev' else 85,minwidth=60,stretch=True)
+  self.tree.delete(*self.tree.get_children());self.lookup={}
+  for i,d in enumerate(self.data):
+   if self.optimal:
+    scores=[('—' if d['points'].get(t) is None else f"{d['points'][t]:.1f}") for t in (1,2,3)];state='Flere registreringer' if d['ambiguous'] else 'Bilbytte' if d['changed'] else 'Mangler / utelatt' if d['delta'] is None else f"{d['delta']:+.1f} p";values=[d['driver'],' → '.join(d['cars']),*scores,state];key=d['key']
+   else:values=[d['driver'],d['vehicle'],d.get('date',''),d.get('minutes','—'),d.get('km','—'),d.get('completion','')];key=d['id']
+   self.lookup[str(i)]=d;self.tree.insert('','end',iid=str(i),values=values)
+   if key==self.focus:self.tree.selection_set(str(i))
+  if not self.tree.selection() and self.data:self.tree.selection_set('0')
+  self.footer.configure(text=f'{len(self.data)} elever / registreringer · Rull for hele lista · Dobbeltklikk for alle turdata · Poeng er relative innen kurs og bil, med felles skala for tur 1–3. Gjeldende vekter brukes, også tid.')
+  self.draw()
+ def select(self,e=None):
+  selected=self.tree.selection()
+  if selected and selected[0] in self.lookup:
+   d=self.lookup[selected[0]];self.focus=d['key'] if self.optimal else d['id'];self.draw()
+ def chosen(self):
+  ids=self.tree.selection();return self.lookup.get(ids[0]) if ids else None
+ def draw(self):
+  c=self.canvas;c.delete('all');d=self.chosen()
+  if not d:return
+  w=max(c.winfo_width(),380);h=max(c.winfo_height(),550);x=18
+  def text(y,s,size=12,color=TEXT):c.create_text(x,y,text=s,fill=color,font=('Segoe UI',size),anchor='nw',width=w-36)
+  text(15,d['driver']+' · Analyse',22)
+  if not self.optimal:
+   text(55,trip_name(d['trip'])+' · '+d['vehicle']);y=95
+   for k,label in [('date','Dato'),('minutes','Tid (min)'),('km','Distanse (km)'),('liters','Liter totalt'),('stops','Unødige stopp'),('teacher','Lærer'),('notes','Notater')]:text(y,label+': '+str(d.get(k,'—')));y+=45
+   text(h-32,'Alle turdata og leveringsstopp →',12,TEAL);return
+  text(52,' · '.join(d['cars'])+(' · Bilbytte: ingen samlet endring' if d['changed'] else ' · Samme bil'),11,MUTED)
+  history=d['history'];chart_h=max(95,min(160,(h-285)/3));y=84
+  for key,label in [('fuel','Forbruk · l/mil'),('stops','Unødige stopp · per 10 km'),('time','Tid · minutter')]:
+   vals=[value(history.get(t),key) for t in (1,2,3)];pct=percent(vals[0],vals[2]) if not d['changed'] and not d['ambiguous'] else None
+   text(y,label+('  '+f'{pct:+.1f}% fra tur 1' if pct is not None else ''),13);top=y+35;bottom=y+chart_h-24
+   peers=[value(p['history'].get(t),key) for p in self.data for t in (1,2,3)];available=[v for v in peers if v is not None];hi=max(available+[1])*1.12
+   for fraction in (0,.5,1):
+    py=bottom-fraction*(bottom-top);c.create_line(48,py,w-22,py,fill='#29465a');c.create_text(43,py,text=f'{hi*fraction:.1f}',fill=MUTED,anchor='e',font=('Segoe UI',9))
+   previous=None
+   for i,v in enumerate(vals):
+    px=65+i*(w-95)/2;c.create_text(px,bottom+13,text='Tur '+str(i+1),fill=MUTED,font=('Segoe UI',10))
+    if v is None:previous=None;continue
+    py=bottom-v/hi*(bottom-top)
+    if previous:c.create_line(*previous,px,py,fill=TEAL,width=2)
+    c.create_oval(px-4,py-4,px+4,py+4,fill=COLORS[i],outline='');c.create_text(px,py-12,text=f'{v:.1f}',fill=TEXT,font=('Segoe UI',11));previous=(px,py)
+   y+=chart_h+9
+  text(y,'Faglige vurderinger · Tur 1 / 2 / 3',12,TEAL);y+=27
+  for q,label in zip(QUAL,LABELS):
+   ratings=[str(history.get(t,{}).get(q,'—')).replace('Middel','Middels') or '—' for t in (1,2,3)];text(y,label+': '+ ' / '.join(ratings),11);y+=25
+  text(h-32,'Alle turdata og notater →',12,TEAL)
+ def details(self):
+  d=self.chosen()
+  if not d:return
+  win=tk.Toplevel(self.window);win.title(d['driver']+' · Alle turdata');win.geometry('850x650');box=tk.Text(win,wrap='word',font=('Segoe UI',12));box.pack(fill='both',expand=True);scroll=ttk.Scrollbar(win,command=box.yview);box.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y')
+  records=list(d['history'].values()) if self.optimal else [d]
+  for r in records:
+   box.insert('end',trip_name(r['trip'])+'\n')
+   for k,v in r.items():
+    if k not in ('id','distribution'):
+     label={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Turnummer','date':'Dato','start_time':'Starttid','minutes':'Minutter','km':'Distanse (km)','liters':'Forbruk totalt (liter)','stops':'Unødige stopp','average_speed':'Gjennomsnittsfart (km/t)','teacher':'Lærer','notes':'Notater','completion':'Registreringsstatus','updated':'Oppdatert','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}.get(k,k);box.insert('end',f'{label}: {v}\n')
+   box.insert('end','\n')
+   if r.get('distribution'):ttk.Button(win,text='Leveringsstopp · '+r['driver'],command=lambda r=r:self.app.show_distribution(r,win)).pack()
+  box.configure(state='disabled')
