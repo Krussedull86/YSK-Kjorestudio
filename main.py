@@ -83,6 +83,13 @@ class App:
    else:widget=ttk.Entry(register,textvariable=v,width=32)
    if k=='trip':self.trip_box=widget;widget.configure(width=40)
    widget.grid(row=row,column=col+1,sticky='ew',padx=8,pady=6)
+  from speed_preview import calculated_speed
+  speed_preview=tk.StringVar()
+  ttk.Label(register,textvariable=speed_preview,foreground='#16803c').grid(row=13,column=0,columnspan=4,sticky='w',padx=8,pady=4)
+  def show_speed(*args):
+   value=calculated_speed(self.fields['km'].get(),self.fields['minutes'].get(),self.fields['average_speed'].get())
+   speed_preview.set(f'Beregnet gjennomsnittsfart: {value:.1f} km/t (inkludert stopp)' if value is not None else '')
+  for key in ('km','minutes','average_speed'):self.fields[key].trace_add('write',show_speed)
   self.fields['course'].trace_add('write',lambda *a:self.update_trip_choices())
   ttk.Button(register,text='Vis distribusjonsstopp',command=self.show_edit_distribution).grid(row=12,column=3,pady=6)
   ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=12,column=1,pady=6)

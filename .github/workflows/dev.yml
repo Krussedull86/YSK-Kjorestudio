@@ -39,8 +39,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -v
-      - run: python -m pip install pyinstaller==6.16.0
-      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name YSK_Kjorestudio --add-data "mobile.html;." main.py
+      - run: python -m pip install pyinstaller==6.16.0 reportlab==4.4.9
+      - run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name YSK_Kjorestudio --collect-data reportlab --add-data "mobile.html;." main.py
       - uses: actions/upload-artifact@v4
         with:
           name: windows

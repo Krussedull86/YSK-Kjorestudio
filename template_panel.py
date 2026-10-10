@@ -1,6 +1,6 @@
 """Parameter bank, immutable trip templates, dynamic forms and school course selection."""
 import tkinter as tk
-from tkinter import ttk,messagebox,simpledialog
+from tkinter import ttk,messagebox,simpledialog,filedialog
 import json,uuid,threading,queue,datetime,hashlib,time
 from pathlib import Path
 TYPES=['number','integer','minutes','stopwatch','rating','boolean','choice','text','fuel']
@@ -12,7 +12,7 @@ class TemplatePanel:
   ttk.Label(frame,text='Turmaler og parameterbank',font=('Segoe UI',22,'bold')).pack(anchor='w')
   self.status=tk.StringVar(value='Henter skolens turmaler …');ttk.Label(frame,textvariable=self.status,wraplength=1000).pack(anchor='w',pady=8)
   tools=ttk.Frame(frame);tools.pack(fill='x')
-  for label,fn in [('Hent / synkroniser',self.load),('Ny tur',self.new_run),('Registrerte turer',self.history),('Klasserom / analyse',self.classroom)]:ttk.Button(tools,text=label,command=fn).pack(side='left',padx=3)
+  for label,fn in [('Hent / synkroniser',self.load),('Ny tur',self.new_run),('Registrerte turer',self.history),('Klasserom / analyse',self.classroom),('Lag papirskjema / PDF',self.paper_forms)]:ttk.Button(tools,text=label,command=fn).pack(side='left',padx=3)
   self.admin_tools=ttk.Frame(frame)
   for label,fn in [('Parameterbank',self.bank),('Endre valgt turmal',self.edit_template),('Ny egendefinert turmal',lambda:self.edit_template(True)),('Turmaler i kurs',self.course_templates)]:ttk.Button(self.admin_tools,text=label,command=fn).pack(side='left',padx=3)
   selector=ttk.Frame(frame);selector.pack(fill='x',pady=10);ttk.Label(selector,text='Turmal').pack(side='left');self.choice=tk.StringVar();self.box=ttk.Combobox(selector,textvariable=self.choice,state='readonly',width=50);self.box.pack(side='left',padx=8);self.box.bind('<<ComboboxSelected>>',lambda e:self.new_run())
@@ -73,9 +73,15 @@ class TemplatePanel:
   for p in self.current['definition']['parameters']:
    raw=self.widgets[p['id']].get().strip()
    if raw in ('','-'):values[p['id']]=None if raw=='' else '-'
-   elif p['type'] in ('number','integer','minutes','stopwatch'):values[p['id']]=float(raw.replace(',','.')) if convert else raw
+   elif p['type'] in ('minutes','stopwatch'):
+    from speed_preview import duration_minutes
+    values[p['id']]=duration_minutes(raw) if convert else raw
+   elif p['type'] in ('number','integer'):values[p['id']]=float(raw.replace(',','.')) if convert else raw
    elif p['type']=='boolean':values[p['id']]=raw=='Ja'
    elif p['type']!='fuel':values[p['id']]=raw
+  from speed_preview import calculated_speed
+  if convert and 'average_speed' in values and values['average_speed'] is None:
+   values['average_speed']=calculated_speed(values.get('km'),values.get('minutes'))
   return dict(driver=self.widgets['@driver'].get(),course=self.widgets['@course'].get(),vehicle=self.widgets['@vehicle'].get(),date=self.widgets['@date'].get(),complete=False,values=values)
  def persist_draft(self):
   if self.cache and self.current:
@@ -110,6 +116,28 @@ class TemplatePanel:
    for id in ('km','liters'):
     if id in self.widgets:self.widgets[id].trace_add('write',calculate)
    calculate()
+  if 'average_speed' in self.widgets:
+   from speed_preview import calculated_speed
+   result=tk.StringVar();ttk.Label(self.form,textvariable=result,foreground='#16803c').grid(row=len(fields),column=0,columnspan=3,sticky='w',padx=8,pady=6)
+   def show_speed(*args):
+    value=calculated_speed(self.widgets['km'].get() if 'km' in self.widgets else '',self.widgets['minutes'].get() if 'minutes' in self.widgets else '',self.widgets['average_speed'].get())
+    result.set(f'Beregnet gjennomsnittsfart: {value:.1f} km/t (inkludert stopp)' if value is not None else '')
+   for key in ('km','minutes','average_speed'):
+    if key in self.widgets:self.widgets[key].trace_add('write',show_speed)
+   show_speed()
+ def paper_forms(self):
+  if not self.catalog:return
+  def work():
+   rows=[];offset=0
+   while True:
+    page=self.receiver.admin('template_runs',offset=offset)['runs'];rows+=page
+    if len(page)<100:break
+    offset+=100
+   return rows
+  def done(rows):
+   from paper_forms import FormsDialog
+   FormsDialog(self.app,self.catalog,self.cache,rows)
+  self.task(work,done)
  def stopwatch(self,id):
   if id in self.starts:
    base,start=self.starts.pop(id);self.widgets[id].set(f'{base+(time.time()-start)/60:.2f}')

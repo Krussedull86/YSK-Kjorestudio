@@ -77,3 +77,11 @@ Faste poenggrenser på nye tallparametre velges av admin: min, maks og høyere/l
 Hver malendring lagrer en ny versjon. Gamle parameterturer bruker originalt oppsett. PC-knappen Klasserom / analyse sammenligner samme skole, kurs, bil, elev, malversjon og identiske felt/vekter. Optimaltur 1–3 kan sammenlignes når disse samsvarer. Egne maler må ha samme mal-ID. Kursvalg av maler lagres separat fra klassiske aktive turer og kontrolleres ved ny registrering.
 Utkast lagres lokalt per skole og bruker. En ventende innsending beholdes ved nettfeil og må sendes eller korrigeres før ny tur. PC prøver på nytt ved Hent / synkroniser; Android har Send ventende tur. Revisjonsnummer beskytter mot samtidige endringer. Lærere leser egne parameterturer; admin ser skolens.
 Etter innlogging ved oppstart sjekkes brukerens kanal automatisk. Ny tilgjengelig oppdatering varsles; installasjonen velges av brukeren.
+
+
+### Papirskjema og gjennomsnittsfart (dev 1.12.1)
+I **Turmaler / egendefinerte turer → Lag papirskjema / PDF** velges kurs, elevnavn og turer. Elevlisten kan redigeres og nye elever kan legges til før de har kjørt. Listen huskes lokalt for den innloggede brukeren. Velg vanlige turer 1–5 eller skolens turmaler. PDF-en inneholder alle valgte parametre, navn, valgfritt dato/bil/lærer, signaturlinje og distribusjonsstopp fra kursoppsettet. Skjemaene er blanke for håndskrift. Hver elev starter på en ny A4-side, lange skjemaer fortsetter på flere sider.
+
+Tom gjennomsnittsfart vises i grønt som beregnet km × 60 / minutter, inkludert stopp og pauser i oppgitt total tid. Et manuelt tall overstyrer beregningen, og `-` gir ingen beregnet fart. I parameterturer sendes beregnet fart ved lagring; utkastet beholder tomt felt slik at forhåndsvisningen følger endringer i distanse og tid. Fart gir ikke poeng i standardoppsettet.
+
+Windows-builden inkluderer ReportLab 4.4.9 for PDF-eksport. Ved kjøring fra kildekode: `python -m pip install reportlab==4.4.9`.
