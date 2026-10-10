@@ -159,7 +159,8 @@ class App:
   return show(parent or self.root,d)
  def show_edit_distribution(self):
   if self.edit_distribution is None:return messagebox.showinfo('Distribusjon','Åpne en registrert distribusjonstur med stopplogg først.')
-  self.show_distribution({'driver':self.fields['driver'].get(),'course':self.fields['course'].get(),'distribution':self.edit_distribution})
+  from distribution_view import show
+  show(self.root,{'driver':self.fields['driver'].get(),'course':self.fields['course'].get(),'distribution':self.edit_distribution},lambda changed:setattr(self,'edit_distribution',changed))
  def compare_dialog(self):
   dialog=tk.Toplevel(self.root);dialog.title('Turer som sammenlignes');values=[]
   for n,name in enumerate(NAMES,1):

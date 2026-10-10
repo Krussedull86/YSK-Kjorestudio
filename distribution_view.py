@@ -1,9 +1,9 @@
 """Full classroom delivery timeline, including aborted and pending stops."""
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk,messagebox
 from distribution import validate_run,rows,summary,return_minutes
 
-def show(parent,trip):
+def show(parent,trip,on_change=None):
  data=validate_run(trip['distribution']);window=tk.Toplevel(parent);window.title('Distribusjon · '+trip['driver']);window.geometry('1100x600')
  ttk.Label(window,text=trip['driver']+' · '+trip['course'],font=('Segoe UI',18,'bold')).pack(anchor='w',padx=16,pady=10)
  ttk.Label(window,text=summary(data)).pack(anchor='w',padx=16)
@@ -19,5 +19,25 @@ def show(parent,trip):
   else:table.insert('','end',values=[i,'Ikke registrert','—','—',''])
  if finished is not None:table.insert('','end',values=['Retur','Tilbake ved skolen',f'{return_minutes(data):.1f}',f'{finished:.1f}','Siste registrerte stopp → skole'])
  elif len(events)==len(data['deadlines']):table.insert('','end',values=['Retur','Pågår','—','—','Avslutt tur først ved skolen'])
- ttk.Button(window,text='Lukk',command=window.destroy).pack(pady=8)
+ if on_change is not None:
+  def edit():
+   selected=table.selection()
+   if not selected:return
+   stop=table.item(selected[0],'values')[0]
+   try:stop=int(stop)
+   except ValueError:return
+   if stop>len(data['events']):return
+   e=data['events'][stop-1];dialog=tk.Toplevel(window);dialog.title('Endre stopp '+str(stop));status=tk.StringVar(value='Rygget til rampe' if e['status']=='ramp' else 'Avbrutt')
+   ttk.Combobox(dialog,textvariable=status,values=['Rygget til rampe','Avbrutt'],state='readonly',width=30).pack(padx=16,pady=10)
+   note=tk.Text(dialog,height=5,width=50);note.pack(padx=16,pady=8);note.insert('1.0',e['reason'])
+   ttk.Label(dialog,text='Tidspunktet beholdes. Trykk Lagre tur etterpå.').pack(padx=16,pady=8)
+   def apply():
+    from distribution import edit_event
+    try:
+     changed=edit_event(data,stop,'ramp' if status.get()=='Rygget til rampe' else 'aborted',note.get('1.0','end-1c'));on_change(changed);dialog.destroy();window.destroy();show(parent,dict(trip,distribution=changed),on_change)
+    except ValueError as error:messagebox.showerror('Kontroller stopp',str(error),parent=dialog)
+   ttk.Button(dialog,text='Bruk endring',command=apply).pack(pady=10)
+  ttk.Button(window,text='Endre valgt stopp / kommentar',command=edit).pack(pady=8)
+  table.bind('<Double-1>',lambda event:edit())
+ ttk.Button(window,text='Lukk' ,command=window.destroy).pack(pady=8)
  return window

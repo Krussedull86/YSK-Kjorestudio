@@ -1,3 +1,5 @@
+1.12.2 / bygg 31 – Dev Android og Windows: registrerte distribusjonsstopp kan endres mellom Rygget til rampe og Avbrutt, med redigerbar kommentar. Gjelder pågående og avsluttede turer. Opprinnelige stopptider, returtid og totaltid beholdes. Lagre tur etter endringen for synkronisering.
+
 1.12.1 / bygg 30 – Dev Android og Windows: tom gjennomsnittsfart vises i grønt som beregnet fra km og total tid, inkludert stopp. Manuell fart og - beholdes. PC får skjemaoppretter med kurs, redigerbar elevliste, valgte turer, alle parametre, ferdig navn, signaturfelt og distribusjonsstopp. Utskriftsklare A4-PDF-er med fortsettelsessider og navn på hver side.
 
 1.12.0 / bygg 29 – Dev Android og Windows: parameterbank, versjonerte turmaler og egendefinerte parameterturer. Admin velger felt, krav, grafer, faste poenggrenser og vekting samt turmaler per kurs. Gamle turer beholder sitt oppsett. Lokale utkast og ventende innsending beholdes. PC har analyse av sammenlignbare parameterturer. Automatisk oppdateringssjekk etter innlogging ved oppstart varsler ny tilgjengelig utgave.

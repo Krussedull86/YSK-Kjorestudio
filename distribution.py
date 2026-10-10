@@ -62,3 +62,11 @@ def return_minutes(data):
  data=validate_run(data)
  if data['finished_minutes'] is None or len(data['events'])!=len(data['deadlines']):return None
  return data['finished_minutes']-data['events'][-1]['elapsed_minutes']
+
+
+def edit_event(data,stop,status,reason):
+ data=validate_run(data)
+ if isinstance(stop,bool) or not isinstance(stop,int) or not 1<=stop<=len(data['events']):raise ValueError('Velg et registrert stopp.')
+ if status not in ('ramp','aborted') or not isinstance(reason,str) or len(reason)>300:raise ValueError('Velg status og kommentar på maks 300 tegn.')
+ data['events'][stop-1]=dict(data['events'][stop-1],status=status,reason=reason.strip())
+ return validate_run(data)
