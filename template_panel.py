@@ -19,7 +19,7 @@ class TemplatePanel:
   self.course_choice=tk.StringVar(value='Alle');ttk.Label(selector,text='Kurs').pack(side='left',padx=(12,3));self.course_box=ttk.Combobox(selector,textvariable=self.course_choice,state='readonly',width=22);self.course_box.pack(side='left');self.course_box.bind('<<ComboboxSelected>>',lambda e:self.filter_templates())
   self.form_canvas=tk.Canvas(frame,highlightthickness=0);sy=ttk.Scrollbar(frame,command=self.form_canvas.yview);sy.pack(side='right',fill='y');self.form_canvas.configure(yscrollcommand=sy.set);self.form_canvas.pack(fill='both',expand=True);self.form=ttk.Frame(self.form_canvas);self.form_id=self.form_canvas.create_window(0,0,window=self.form,anchor='nw');self.form.bind('<Configure>',lambda e:self.form_canvas.configure(scrollregion=self.form_canvas.bbox('all')));self.form_canvas.bind('<Configure>',lambda e:self.form_canvas.itemconfigure(self.form_id,width=e.width))
   bottom=ttk.Frame(frame);bottom.pack(fill='x',pady=8);ttk.Button(bottom,text='Lagre uferdig',command=lambda:self.save(False)).pack(side='left',padx=4);ttk.Button(bottom,text='Lagre ferdig tur',command=lambda:self.save(True)).pack(side='left',padx=4)
-  ttk.Label(bottom,text='– = bevisst utelatt. Gamle turer beholder malversjonen.').pack(side='left',padx=14)
+  ttk.Label(bottom,text='– = bevisst utelatt. Poeng gjelder bare vektede felt. Gamle turer beholder malversjonen.').pack(side='left',padx=14)
   app.root.after(200,self.poll);app.root.after(700,self.load)
  def task(self,fn,done):
   if self.busy:return
