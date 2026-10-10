@@ -1,4 +1,97 @@
-1.10.1 / B27
+1.11.0 / bygg 28 – Dev Windows: ny kompakt klasseromsvisning med alle elever i rullbar liste, poeng for optimaltur 1–2–3 og analysefelt med linjegrafer og prosentvis endring. Felles relativ poengskala innen kurs og bil for de tre turene, med gjeldende vekter. Bilbytte og manglende verdier merkes. Distribusjon og langtur vises separat med turdata og leveringsstopp. Åpnes via Vis på storskjerm.
+
+1.10.0 / bygg 26 – Dev: tilbakemeldinger/forslag og feilmeldinger fra Android og PC. Meldinger med navn, versjon og enhetsinfo lagres i skolens admininnboks. Admin kan lese, filtrere, endre status og konfigurere to separate Discord-webhooks. Discord-feil mister ikke meldingen; admin kan prøve sending på nytt. Webhook-adressene holdes på serveren.
+
+1.9.4 / bygg 25 – Dev: distribusjon er skole til skole. Etter siste stopp vises Retur pågår; Avslutt tur brukes ved skolen. Returintervallet fra siste registrerte stopp vises separat på Android og PC. Til rampe i app/meny åpner valgfri kommentar etter å ha lagret tidspunktet. Kommentar kan legges til eller endres for hvert stopp, også stopp registrert fra varselet.
+
+1.9.3 / bygg 24 – Dev Android: Rygget til rampe og Avbryt stopp ligger i appmenyen og i det nedtrekkbare tidtakingsvarselet. Etter alle stopp vises Avslutt. Registrering fra varselet lagres i samme lokale stopplogg og oppdateres i skjemaet uten å miste andre felt.
+
+1.9.2 / bygg 23 – Dev: fjerner hele sammenligningen foran/bak planen, i rute, stoppfrister, nedtelling og tidsavvik fra Android og klasseromsvisningen på PC. Viser faktisk tid fra start, minutter mellom stopp, rampe/avbrutt og forventet totaltid som informasjon.
+
+1.9.1 / bygg 22 – Dev: fristfeltet er fjernet fra kursoppsettet på Android og PC. Velg antall distribusjonsstopp og forventet totaltid; tidsplanen fordeles automatisk. Retter manglende servertilgang til valideringen ved lagring av kursoppsett.
+
+1.9.0 / bygg 21 – Dev: distribusjon med Start, leveringsstopp «Rygget til rampe» og «Avbrutt» med grunn. Kursoppsettet angir 0–30 stopp, forventet totaltid og valgfrie stoppfrister fra start. Klokken inkluderer lasting, venting og pauser. Turloggen viser minutter mellom stopp, samlet fra start, avvik fra planen og avbrutte stopp. PC og klasserom har full stopptabell. Tidsplanen følger turen selv om kurset endres senere.
+
+1.8.1 / bygg 20 – Dev: påkrevd innlogging før tilgang til PC og Android. Registrering, resultater, menyer og lokal mobilserver åpnes først etter serverkontroll av aktiv brukerkonto. Lagret økt kontrolleres ved oppstart. Logg ut går tilbake til innlogging uten å slette lokale turer.
+
+1.8.0 · bygg 19 (dev)
+- Skoler og avdelinger: opprett, endre navn og tildel brukere i adminpanelet på PC og Android.
+- Innlogging med e-post og passord; appen håndterer offentlig API-nøkkel og adresse.
+- Skole og avdeling vises på innlogget konto. Avdelinger deler kurs innen skolen.
+- Tilgang begrenses til egne/administrerte skoler. Gamle turer flyttes ikke ved skolebytte.
+
+1.7.0 / bygg 18 – Dev: kursoppsett med 1–5 aktive turer. Optimaltur 1–3 og Transportoppdrag 1 (distribusjon) / 2 (langtur). Kursoppsett deles via skyen. Navn i registrering og klasserom. Velg hvilke turer som inngår i sammenligningen og hvilken tur forbedring måles fra.
+
+1.6.4 / bygg 16 – Android dev-utgave etter publisering av Windows og Android til stabil. Android får korrekt versjonsnummer fra byggeoppsettet. Kun Android bygges og publiseres.
+
+1.6.3 / bygg 15 – Uavhengige Windows-/Android-bygg basert på endrede filer. Manuelt valg: auto, windows, android, both. Oppdateringssjekk beholder forrige utgave for urørt plattform.
+
+1.6.2 / bygg 14 – PC: lagring av uferdige turer lokalt, rød prikk og varsel, tomme vurderinger og - for bevisst utelatte felt. Uferdige turer tas ikke med i rangering. Skyredigering krever fullføring eller -.
+
+1.6.1 / bygg 13 (dev)
+- Slett aldri synkroniserte utkast direkte på telefonen, uten skyfeil.
+- PC-oversikten oppdateres også når bare utelatte målinger endres.
+
+1.6.0 / bygg 12 (dev)
+- Lagre uferdige turer lokalt. Mine turer viser rød prikk, antall og liste over manglende felt.
+- Tomt betyr mangler. - betyr bevisst utelatt; egen - knapp ved målinger og vurderinger.
+- Ingen forhåndsutfylt Middels-vurdering for nye turer.
+- Uferdige turer sendes først når alle obligatoriske felt er utfylt eller markert -.
+- Gjennomsnittsfart kan være tom for automatisk beregning; notater er valgfrie.
+- PC og sky støtter - uten nullverdier. Turen vises i PC-oversikten uten poeng når rangeringen mangler grunnlag.
+- Stoppeklokken må stoppes før turen lagres. Stable endres ikke.
+
+1.5.3 · bygg 11 · dev · 2026-10-08
+- Høy prioritet som standard for tidtakervarsel; lyd og vibrasjon er av.
+- Knapp i innstillinger åpner Androids varselvalg.
+- Brukerens egne prioriteringsvalg beholdes på Android 10 og nyere.
+
+1.5.2 · bygg 10 · dev · 2026-10-08
+- Rød + Unødig stans-knapp i appen og 🔴 + Stans i tidtakervarselet.
+- Antall stopp kan alltid skrives manuelt og redigeres senere.
+- Varsel og skjema bruker samme utkast, med vern mot gamle skjermverdier.
+
+1.5.1 · bygg 9 · dev · 2026-10-08
+- Tidtaker i telefonens nedtrekkspanel med Pause / Gjenoppta / Stopp.
+- Stopp oppdaterer turskjema og utkast uten å åpne appen.
+- Android ber om varslingstillatelse når tidtaking startes.
+
+1.5.0 · bygg 8 · dev · 2026-10-08
+- Kompakt menylinje, rullbar status og ingen fast bunn.
+- Færre valgknapper og tydelige grupper i registreringen.
+- Start/stopp/fortsett/nullstill for tidtaking. Stopp fyller automatisk inn kjøretid.
+- Klokken og utkastet beholdes ved skjermlås, appbytte og omstart av appen.
+- Monoton klokke beskytter mot endret telefonklokke under samme oppstart.
+
+1.4.0 · bygg 7 · dev · 2026-10-07
+- Android og PC: rediger og slett turer, endre kursnavn og bilnavn.
+- Admin kan administrere alle skolens turer; lærere egne turer.
+- Sletting er reversibel via papirkurven. Sletting av kurs/bil arkiverer alle tilhørende turer etter bekreftelse med antall.
+- PC-endringer synkroniseres tilbake til telefonen.
+- Revisjonskontroll avviser gamle/offline endringer når skyversjonen er nyere.
+- Android oppgraderer lokal database uten å slette eksisterende turer.
+- Krever oppdatert APK og EXE for papirkurv og synkronisering.
+
+1.3.2 · bygg 6 · DEV TEST · 2026-10-07
+Test av automatisk APK-oppdatering fra GitHub til dev-brukere.
+Samme app-ID og Android-signering som tidligere utgaver.
+Stable-kanalen endres ikke.
+
+1.3.1 · bygg 5 · DEV TEST · 2026-10-07
+Testutgave for å kontrollere oppdatering fra APK bygg 4 til bygg 5 og Windows EXE.
+GitHub-prosjektet er etablert som privat repo.
+Rettet åpne SQLite-forbindelser som låste filer på Windows.
+
+1.3.0 · bygg 4 · 2026-10-07
+Lys og interaktiv klasseromsvisning i helskjerm, også på skjerm 2.
+Elleve visninger: samlet poeng, forbedring, forbruk, tid/km, stopp/km, trafikksikkerhet, fartsavpassing, fartsøkning, komfort, vurderinger og siste turer.
+Velg kurs, bil, tur og turen forbedringen skal sammenlignes med.
+Klikk på eleven for graf, turdetaljer, vurderinger og lærer. Alle elever vises over flere sider.
+Administrator kan velge dev/stable for hver bruker i APK, PC og oppdateringsportal.
+Android og PC sjekker automatisk etter nye versjoner; installasjon startes av brukeren.
+Filer kontrolleres med størrelse og SHA-256. Android kontrollerer også app-ID og signatur.
+Portal for publisering til dev og eksplisitt flytting av samme filer til stable.
+\n\n1.10.1 / B27
 Distribusjon viser stopp igjen, nedtelling av totaltiden skole til skole og tilgjengelig snitt per gjenværende stopp (inkludert retur). Avbrutte stopp telles som registrert. Nedtellingen stopper på null; turen avsluttes fortsatt manuelt ved skolen.
 
 1.10.0 / bygg 26 – Dev: tilbakemeldinger/forslag og feilmeldinger fra Android og PC. Meldinger med navn, versjon og enhetsinfo lagres i skolens admininnboks. Admin kan lese, filtrere, endre status og konfigurere to separate Discord-webhooks. Discord-feil mister ikke meldingen; admin kan prøve sending på nytt. Webhook-adressene holdes på serveren.
