@@ -1,3 +1,5 @@
+1.12.4 / bygg 33 – Dev kun Android: Etterregistrer tur i menyen og historikken, med faktisk dato og målinger uten å starte klokken. Se alle turdata åpner en lesbar oversikt før redigering. Hent registrerte turer fra skyen og søk elev, kurs, bil, dato eller tur. Manuell etterregistrering og redigering av ferdige distribusjonslogger med stopp, faktiske stopptider, status, kommentarer og retur. Tidsrekkefølge og avslutning valideres. Tilgang og revisjonskontroll beholdes.
+
 1.12.3 / bygg 32 – Dev kun Android: vanlig tidtaking og distribusjonsstatus tillates vist på låseskjermen, med klokke, pause, antall stans og neste leveringsstopp/retur. Varselet inneholder ikke elevnavn eller kommentarer. Innstillinger har Varsler / status på låseskjerm. Androids egne innstillinger bestemmer om låseskjermvarsler er tillatt.
 
 1.12.2 / bygg 31 – Dev Android og Windows: registrerte distribusjonsstopp kan endres mellom Rygget til rampe og Avbrutt, med redigerbar kommentar. Gjelder pågående og avsluttede turer. Opprinnelige stopptider, returtid og totaltid beholdes. Lagre tur etter endringen for synkronisering.
