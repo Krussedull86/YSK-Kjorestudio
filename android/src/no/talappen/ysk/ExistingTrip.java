@@ -28,7 +28,7 @@ final class ExistingTrip {
  static boolean same(String a,String b){return a.trim().equalsIgnoreCase(b.trim());}
  static void open(MainActivity a,JSONObject p,boolean offline){
   Runnable load=()->{a.form(p);android.widget.Toast.makeText(a,offline?"Åpnet lokal aktivitet. Endringer lagres med Lagre tur.":"Registrert aktivitet hentet. Endringer lagres med Lagre tur.",android.widget.Toast.LENGTH_LONG).show();};
-  boolean measurements=false;for(String key:new String[]{"minutes","km","liters","average_speed","notes"})if(a.inputs.containsKey(key)&&!a.inputs.get(key).getText().toString().trim().isEmpty())measurements=true;for(String value:a.ratings.values())if(value!=null&&!value.isEmpty())measurements=true;
+  boolean measurements=false;for(String key:new String[]{"minutes","km","liters","average_speed","fuel_per_100","notes"})if(a.inputs.containsKey(key)&&!a.inputs.get(key).getText().toString().trim().isEmpty())measurements=true;for(String value:a.ratings.values())if(value!=null&&!value.isEmpty())measurements=true;
   if(measurements)a.dialog().setTitle("Åpne registrert aktivitet?").setMessage("Målingene i det nye utkastet erstattes av den lagrede turen. Endringer i den lagrede turen sendes først når du trykker Lagre tur.").setNegativeButton("Behold utkast",null).setPositiveButton("Åpne aktivitet",(d,w)->load.run()).show();else load.run();
  }
 }

@@ -7,11 +7,12 @@ import tkinter as tk
 DEFAULT_URL='https://otuemdgmymgognzghmnu.supabase.co'
 DEFAULT_API='sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu'
 
-FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','distribution']
+FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','fuel_per_100','distribution']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
+ if values.get('fuel_per_100') is None or not str(values.get('fuel_per_100','')).strip():values.pop('fuel_per_100',None)
  if str(values.get('average_speed','')).strip() not in ['', '-']:values['average_speed']=float(values['average_speed'])
- for k in ['trip','minutes','km','liters','stops']:
+ for k in ['trip','minutes','km','liters','stops','fuel_per_100']:
   if k in values and str(values[k]).strip() not in ['', '-']:values[k]=float(values[k])
  return hashlib.sha256(json.dumps(values,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
 def endpoint(url):

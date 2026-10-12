@@ -98,7 +98,7 @@ class LiveDisplay:
    box.insert('end',trip_name(r['trip'])+'\n')
    for k,v in r.items():
     if k not in ('id','distribution'):
-     label={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Turnummer','date':'Dato','start_time':'Starttid','minutes':'Minutter','km':'Distanse (km)','liters':'Forbruk totalt (liter)','stops':'Unødige stopp','average_speed':'Gjennomsnittsfart (km/t)','teacher':'Lærer','notes':'Notater','completion':'Registreringsstatus','updated':'Oppdatert','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}.get(k,k);box.insert('end',f'{label}: {v}\n')
+     label={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Turnummer','date':'Dato','start_time':'Starttid','minutes':'Minutter','km':'Distanse (km)','liters':'Forbruk totalt (liter)','stops':'Unødige stopp','average_speed':'Gjennomsnittsfart (km/t)','fuel_per_100':'Manuelt forbruk (l/100 km)','teacher':'Lærer','notes':'Notater','completion':'Registreringsstatus','updated':'Oppdatert','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}.get(k,k);box.insert('end',f'{label}: {v}\n')
    box.insert('end','\n')
    if r.get('distribution'):ttk.Button(win,text='Leveringsstopp · '+r['driver'],command=lambda r=r:self.app.show_distribution(r,win)).pack()
   box.configure(state='disabled')

@@ -7,7 +7,7 @@ CLASSIC_FIELDS=[
  ('start_time','Starttid','text',''),('minutes','Forbrukt tid','minutes','min'),
  ('km','Kjørt distanse','number','km'),('average_speed','Gjennomsnittsfart','number','km/t'),
  ('stops','Unødige stopp','integer',''),('liters','Forbruk totalt','number','liter'),
- ('fuel','Forbruk per mil','fuel','l/mil'),('score','Kjørepoeng','number',''),
+ ('fuel','Forbruk per mil','fuel','l/mil'),('fuel_per_100','Forbruk per 100 km','number','l/100 km'),('score','Kjørepoeng','number',''),
  ('trafikksikkerhet','Trafikksikkerhet','rating',''),('avpassing','Fartsavpassing','rating',''),
  ('okning','Fartsøkning','rating',''),('komfort','Komfort','rating',''),('notes','Notater','text','')]
 

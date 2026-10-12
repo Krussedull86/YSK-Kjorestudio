@@ -24,7 +24,7 @@ def analyse(rows,weights,course='Alle',vehicle='Alle'):
 def value(d,key):
  if not d:return None
  try:
-  if key=='fuel':v=10*float(d['liters'])/float(d['km'])
+  if key=='fuel':v=float(d['fuel_per_100'])/10 if d.get('fuel_per_100') is not None else 10*float(d['liters'])/float(d['km'])
   elif key=='stops':v=10*float(d['stops'])/float(d['km'])
   else:v=float(d['minutes'])
   import math

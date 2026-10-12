@@ -70,7 +70,7 @@ class App:
   for frame,title in [(register,'Registrer / rediger'),(overview,'Rangering og turer'),(progress,'Utvikling tur 1–5'),(settings,'Vekter og forklaring')]:nb.add(frame,text=title)
   self.nb=nb;self.register_frame=register;self.fields={}
   self.catalog_boxes={};self.rating_positions={};self.compare_trips=None
-  labels=[('driver','Sjåfør ▾'),('course','Kurs / gruppe ▾'),('vehicle','Bil / sammenligningsgruppe ▾'),('trip','Tur (1–5)'),('date','Dato (ÅÅÅÅ-MM-DD)'),('start_time','Starttid (TT:MM)'),('minutes','Forbrukt tid (min eller mm:ss)'),('km','Kjørt distanse (km)'),('liters','Forbruk totalt (liter)'),('stops','Antall unødige stopp'),('average_speed','Gjennomsnitt km/t (valgfritt)'),('teacher','Lærer / signatur (navn eller initialer)'),('notes','Notater'),('trafikksikkerhet','Trafikksikkerhet'),('avpassing','Fartsavpassing'),('økning','Fartsøkning'),('komfort','Komfort')]
+  labels=[('driver','Sjåfør ▾'),('course','Kurs / gruppe ▾'),('vehicle','Bil / sammenligningsgruppe ▾'),('trip','Tur (1–5)'),('date','Dato (ÅÅÅÅ-MM-DD)'),('start_time','Starttid (TT:MM)'),('minutes','Forbrukt tid (min eller mm:ss)'),('km','Kjørt distanse (km)'),('liters','Forbruk totalt (liter)'),('stops','Antall unødige stopp'),('average_speed','Gjennomsnitt km/t (valgfritt)'),('teacher','Lærer / signatur (navn eller initialer)'),('notes','Notater'),('trafikksikkerhet','Trafikksikkerhet'),('avpassing','Fartsavpassing'),('økning','Fartsøkning'),('komfort','Komfort'),('fuel_per_100','Forbruk l/100 km (valgfritt)')]
   for i,(k,label) in enumerate(labels):
    col=0 if i<9 else 2;row=i if i<9 else i-9
    ttk.Label(register,text=label).grid(row=row,column=col,sticky='w',padx=8,pady=6)
@@ -98,6 +98,12 @@ class App:
   def preview(*args):
    try:self.preview.set(f"Forbruk per 10 km: {10*float(self.fields['liters'].get().replace(',','.'))/float(self.fields['km'].get().replace(',','.')):.2f} liter · Kjørepoeng beregnes i rangeringen")
    except (ValueError,ZeroDivisionError):self.preview.set('Forbruk per 10 km beregnes fra liter og distanse. Kjørepoeng vises i rangeringen.')
+  fuel_preview=tk.StringVar();ttk.Label(register,textvariable=fuel_preview,foreground='#16803c').grid(row=14,column=0,columnspan=4,sticky='w',padx=8,pady=4)
+  def preview_fuel(*args):
+   try:
+    value=100*float(self.fields['liters'].get().replace(',','.'))/float(self.fields['km'].get().replace(',','.'));fuel_preview.set(f'Beregnet forbruk: {value:.2f} l/100 km. Manuelt felt brukes i sammenligningen.' if self.fields['fuel_per_100'].get().strip() else f'Beregnet forbruk: {value:.2f} l/100 km')
+   except (ValueError,ZeroDivisionError):fuel_preview.set('Tomt totalforbruk beregnes fra manuelt l/100 km og distanse ved lagring.')
+  for k in ['liters','km','fuel_per_100']:self.fields[k].trace_add('write',preview_fuel)
   for k in ['liters','km']:self.fields[k].trace_add('write',preview)
   ttk.Button(register,text='Lagre tur',command=self.save).grid(row=10,column=1,pady=12,sticky='ew')
   ttk.Button(register,text='Ny registrering',command=self.reset).grid(row=10,column=3,pady=12,sticky='ew')
@@ -276,7 +282,7 @@ class App:
    try:
     rows=ranking(self.store.all(),self.store.settings())
     with open(path,'w',newline='',encoding='utf-8-sig') as f:
-     fields=['driver','course','vehicle','trip','minutes','km','liters','stops',*QUAL,'date','start_time','average_speed','teacher','notes','forbruk10','score','tid','forbruk','fart'];writer=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore',delimiter=';');writer.writeheader();writer.writerows(rows)
+     fields=['driver','course','vehicle','trip','minutes','km','liters','stops',*QUAL,'date','start_time','average_speed','fuel_per_100','teacher','notes','forbruk10','score','tid','forbruk','fart'];writer=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore',delimiter=';');writer.writeheader();writer.writerows(rows)
     messagebox.showinfo('Eksport','CSV-filen er lagret.')
    except Exception as e:messagebox.showerror('Feil',str(e))
  def poll(self):
