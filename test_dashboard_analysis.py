@@ -1,5 +1,5 @@
 import unittest
-from classroom_analysis import analyse
+from classroom_analysis import analyse,class_ranking
 from core import WEIGHTS,QUAL
 
 class SelectedTripTests(unittest.TestCase):
@@ -18,3 +18,14 @@ class SelectedTripTests(unittest.TestCase):
  def test_manual_fuel_and_zero_baseline(self):
   d=analyse([self.row(1,fuel_per_100=30),self.row(3,fuel_per_100=24)],WEIGHTS)[0];self.assertAlmostEqual(d['changes']['fuel'],-20)
   d=analyse([self.row(1,stops=0),self.row(3,stops=2)],WEIGHTS)[0];self.assertIsNone(d['changes']['stops'])
+
+class RankTests(SelectedTripTests):
+ def test_rank_requires_all_selected_and_same_car(self):
+  rows=[self.row(t) for t in (1,2,3)]+[self.row(1,id='b',driver='Other')]
+  data=class_ranking(analyse(rows,WEIGHTS),(1,2,3))
+  self.assertEqual(data[0]['place'],None)
+  self.assertEqual(data[1]['place'],1)
+ def test_fuel_improvement_sign_and_zero(self):
+  d=class_ranking(analyse([self.row(1,liters=12),self.row(2,liters=9),self.row(3,liters=6)],WEIGHTS),(1,2,3))[0]
+  self.assertEqual(d['fuel_improvement'][2],25)
+  self.assertEqual(d['fuel_improvement'][3],50)

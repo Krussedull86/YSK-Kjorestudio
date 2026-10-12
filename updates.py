@@ -94,8 +94,9 @@ class UpdatesPanel:
      self.notes.configure(state='normal');self.notes.delete('1.0','end');self.notes.insert('1.0',r['notes'] if r else '');self.notes.configure(state='disabled');self.get_button.configure(state='normal' if new else 'disabled',text='Last ned og installer')
      if new and not self.startup_checked:
       self.startup_checked=True
-      if messagebox.askyesno('Ny YSK-utgave',f"Versjon {r['version']} er tilgjengelig på {channel}. Åpne Oppdateringer?"):
+      if messagebox.askyesno('Ny YSK-utgave',f"Versjon {r['version']} er tilgjengelig på {channel}. Last ned og installer nå?"):
        self.app.nb.select(self.get_button.master)
+       self.get()
      else:self.startup_checked=True
   except queue.Empty:pass
   if not self.busy and time.time()-self.last>3600:

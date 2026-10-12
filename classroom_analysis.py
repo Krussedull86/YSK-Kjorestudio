@@ -43,3 +43,23 @@ def percent(a,b):return None if a is None or b is None or a==0 else 100*(b-a)/a
 
 def summary(data,trips=(1,2,3)):
  return {'students':len(data),'complete':sum(all(d['points'].get(t) is not None for t in trips) and not d['ambiguous'] and not d['changed'] for d in data),'registered':sum(t in d['history'] for d in data for t in trips),'comparable':sum(d['delta'] is not None for d in data)}
+
+
+def class_ranking(data,trips):
+ """Rank complete students within the same course and vehicle; preserve ties."""
+ groups={}
+ for d in data:
+  d['place']=None
+  d['fuel_improvement']={t:None for t in trips}
+  if not d['changed'] and not d['ambiguous']:
+   for t in trips:
+    change=percent(value(d['history'].get(1),'fuel'),value(d['history'].get(t),'fuel')) if t!=1 else None
+    d['fuel_improvement'][t]=None if change is None else -change
+   if trips and all(d['points'].get(t) is not None for t in trips):
+    groups.setdefault((d['course'],tuple(d['cars'])),[]).append(d)
+ for peers in groups.values():
+  previous=None;place=0
+  for index,d in enumerate(sorted(peers,key=lambda d:-d['average']),1):
+   if previous!=d['average']:place=index;previous=d['average']
+   d['place']=place
+ return data

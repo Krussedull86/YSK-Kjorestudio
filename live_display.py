@@ -1,7 +1,7 @@
 """Native classroom dashboard: compact list, real percentage changes and line charts."""
 import tkinter as tk
 from tkinter import ttk
-from classroom_analysis import analyse,value,percent,summary
+from classroom_analysis import analyse,value,percent,summary,class_ranking
 from core import QUAL
 from course_setup import trip_name
 BG='#f3f5f8';PANEL='#ffffff';TEXT='#132235';MUTED='#65758a';EDGE='#e1e7ee';TEAL='#087f72';RED='#b53c43';BLUE='#276ad4';GOLD='#a86b12';COLORS=[BLUE,TEAL,GOLD]
@@ -9,12 +9,13 @@ LABELS=['Trafikksikkerhet','Fartsavpassing','Fartsøkning','Komfort']
 METRICS={'Poeng':('score','poeng / 100'),'Forbruk':('fuel','l/100 km'),'Tid':('time','minutter'),'Unødige stopp':('stops','stopp / 10 km'),'Gjennomsnittsfart':('speed','km/t'),'Tid per km':('time_per_km','min/km')}
 class LiveDisplay:
  def __init__(self,app,window,embedded=False):
-  self.app=app;self.window=window;self.embedded=embedded;self.focus=None;self.signature=None;self.sort_key='Elev';self.desc=False;self.auto=False;self.auto_count=0;self.images=[];self.timer=None
+  self.app=app;self.window=window;self.embedded=embedded;self.focus=None;self.signature=None;self.sort_key='Snitt';self.desc=True;self.auto=False;self.auto_count=0;self.images=[];self.timer=None
   window.configure(bg=BG);self.frame=tk.Frame(window,bg=BG);self.frame.pack(fill='both',expand=True,padx=16,pady=12)
   top=tk.Frame(self.frame,bg=BG);top.pack(fill='x',pady=(0,10));tk.Label(top,text='YSK Kjørestudio',bg=BG,fg=TEXT,font=('Segoe UI',23,'bold')).pack(side='left');tk.Label(top,text='  KLASSEOVERSIKT',bg=BG,fg=MUTED,font=('Segoe UI',10,'bold')).pack(side='left')
-  ttk.Button(top,text='+ Registrer tur',command=lambda:app.nb.select(app.register_frame)).pack(side='right')
+  self.back_button=ttk.Button(top,text='Tillbake til alle elever',command=self.overview)
+  if embedded:ttk.Button(top,text='+ Registrer tur',command=lambda:app.nb.select(app.register_frame)).pack(side='right')
   ttk.Button(top,text='Storskjerm' if embedded else 'Alle turdata',command=app.bigscreen if embedded else self.details).pack(side='right',padx=8)
-  self.course=tk.StringVar(value=app.filters['course'][0].get());self.vehicle=tk.StringVar(value=app.filters['vehicle'][0].get());self.view=tk.StringVar(value='Optimaltur 1–2–3');self.search=tk.StringVar();self.metric=tk.StringVar(value='Poeng');self.trip_vars={t:tk.BooleanVar(value=app.compare_trips is None or t in app.compare_trips) for t in (1,2,3)}
+  self.course=tk.StringVar(value=app.filters['course'][0].get());self.vehicle=tk.StringVar(value=app.filters['vehicle'][0].get());self.view=tk.StringVar(value='Optimaltur 1–2–3');self.search=tk.StringVar();self.table_mode=tk.StringVar(value='Poeng og målinger');self.metric=tk.StringVar(value='Poeng');self.trip_vars={t:tk.BooleanVar(value=app.compare_trips is None or t in app.compare_trips) for t in (1,2,3)}
   stats=tk.Frame(self.frame,bg=BG);stats.pack(fill='x',pady=(0,12));self.stats=[];self.stat_titles=[]
   for title in ('ELEVER','REGISTRERTE OPTIMALTURER','FERDIG MED VALGTE TURER','SAMMENLIGNBARE ELEVER'):
    f=tk.Frame(stats,bg=PANEL,padx=14,pady=9);f.pack(side='left',fill='x',expand=True,padx=(0,8));label=tk.Label(f,text=title,bg=PANEL,fg=MUTED,font=('Segoe UI',9,'bold'));label.pack(anchor='w');self.stat_titles.append(label);v=tk.StringVar(value='—');self.stats.append(v);tk.Label(f,textvariable=v,bg=PANEL,fg=TEXT,font=('Segoe UI',23,'bold')).pack(anchor='w')
@@ -24,15 +25,17 @@ class LiveDisplay:
   self.box_Visning['values']=['Optimaltur 1–2–3',trip_name(4),trip_name(5)];ttk.Entry(controls,textvariable=self.search,width=20).pack(side='right');tk.Label(controls,text='Søk elev / lærer',bg=BG,fg=MUTED).pack(side='right',padx=5);self.search.trace_add('write',lambda *a:self.paint(True))
   self.trip_controls=tk.Frame(self.frame,bg=BG);self.trip_controls.pack(fill='x',pady=(0,10));tk.Label(self.trip_controls,text='Sammenlign',bg=BG,fg=MUTED).pack(side='left',padx=(0,10))
   for t,v in self.trip_vars.items():ttk.Checkbutton(self.trip_controls,text='Tur '+str(t),variable=v,command=lambda:self.paint(True)).pack(side='left',padx=5)
-  tk.Label(self.trip_controls,text='  Klikk en kolonne for å sortere · Velg en elev for analyse',bg=BG,fg=MUTED,font=('Segoe UI',10)).pack(side='left')
-  self.split=tk.PanedWindow(self.frame,orient='horizontal',bg=BG,sashwidth=8,relief='flat');self.split.pack(fill='both',expand=True);left=tk.Frame(self.split,bg=PANEL);right=tk.Frame(self.split,bg=PANEL);self.split.add(left,minsize=510,stretch='always');self.split.add(right,minsize=390,stretch='always')
+  tk.Label(self.trip_controls,text='  Klikk en kolonne for å sortere · Dobbeltklikk en elev for analyse',bg=BG,fg=MUTED,font=('Segoe UI',10)).pack(side='left')
+  self.split=tk.PanedWindow(self.frame,orient='horizontal',bg=BG,sashwidth=8,relief='flat');self.split.pack(fill='both',expand=True);left=tk.Frame(self.split,bg=PANEL);right=tk.Frame(self.split,bg=PANEL);self.split.add(left,minsize=510,stretch='always');self.right=right;self.analysis_open=False
   style=ttk.Style();style.configure('Classroom.Treeview',background=PANEL,fieldbackground=PANEL,foreground=TEXT,rowheight=34,font=('Segoe UI',11),borderwidth=0);style.configure('Classroom.Treeview.Heading',background=EDGE,foreground=MUTED,font=('Segoe UI',9,'bold'),padding=7);style.map('Classroom.Treeview',background=[('selected','#e1f2ee')],foreground=[('selected',TEXT)])
-  self.tree=ttk.Treeview(left,style='Classroom.Treeview',show='tree headings',selectmode='browse');sy=ttk.Scrollbar(left,command=self.tree.yview);sx=ttk.Scrollbar(left,orient='horizontal',command=self.tree.xview);self.tree.configure(yscrollcommand=sy.set,xscrollcommand=sx.set);sy.pack(side='right',fill='y');sx.pack(side='bottom',fill='x');self.tree.pack(fill='both',expand=True);self.tree.bind('<<TreeviewSelect>>',self.select);self.tree.bind('<Double-1>',lambda e:self.details());self.tree.tag_configure('warn',foreground=GOLD);self.tree.tag_configure('up',foreground=TEAL)
+  self.tree=ttk.Treeview(left,style='Classroom.Treeview',show='tree headings',selectmode='browse');sy=ttk.Scrollbar(left,command=self.tree.yview);sx=ttk.Scrollbar(left,orient='horizontal',command=self.tree.xview);self.tree.configure(yscrollcommand=sy.set,xscrollcommand=sx.set);sy.pack(side='right',fill='y');sx.pack(side='bottom',fill='x');self.tree.pack(fill='both',expand=True);self.tree.bind('<<TreeviewSelect>>',self.select);self.tree.bind('<Double-1>',lambda e:self.open_analysis());self.tree.tag_configure('warn',foreground=GOLD);self.tree.tag_configure('up',foreground=TEAL)
   chart_controls=tk.Frame(right,bg=PANEL);chart_controls.pack(fill='x',padx=12,pady=(10,0));tk.Label(chart_controls,text='Analyse',bg=PANEL,fg=TEXT,font=('Segoe UI',11,'bold')).pack(side='left');metric_box=ttk.Combobox(chart_controls,textvariable=self.metric,values=list(METRICS),state='readonly',width=20);metric_box.pack(side='right');metric_box.bind('<<ComboboxSelected>>',lambda e:self.draw())
   self.canvas=tk.Canvas(right,bg=PANEL,highlightthickness=0);cs=ttk.Scrollbar(right,command=self.canvas.yview);self.canvas.configure(yscrollcommand=cs.set);cs.pack(side='right',fill='y');self.canvas.pack(fill='both',expand=True);self.canvas.bind('<Configure>',lambda e:self.draw());self.canvas.bind('<MouseWheel>',lambda e:self.canvas.yview_scroll(-int(e.delta/120),'units'));self.canvas.bind('<Button-1>',self.canvas_click)
+  tk.Label(self.trip_controls,text='  Vis',bg=BG,fg=MUTED).pack(side='left',padx=6)
+  modes=ttk.Combobox(self.trip_controls,textvariable=self.table_mode,values=['Poeng og målinger','Alle data'],state='readonly',width=18);modes.pack(side='left');modes.bind('<<ComboboxSelected>>',lambda e:self.paint(True))
   self.footer=tk.Label(self.frame,bg=BG,fg=MUTED,anchor='w',font=('Segoe UI',9),wraplength=1400,justify='left');self.footer.pack(fill='x',pady=(8,0))
   if not embedded:window.bind('<Escape>',lambda e:window.destroy());window.bind('<F11>',lambda e:app.fill_screen(window))
-  window.bind('<Destroy>',self.destroyed,add='+');self.paint(True);self.timer=window.after(1500,self.tick);window.after(100,lambda:self.split.sash_place(0,int(self.split.winfo_width()*.57),0) if window.winfo_exists() else None)
+  window.bind('<Destroy>',self.destroyed,add='+');self.paint(True);self.timer=window.after(1500,self.tick);window.after(100,self.overview)
  def destroyed(self,e):
   if e.widget==self.window and self.timer:
    try:self.window.after_cancel(self.timer)
@@ -65,18 +68,22 @@ class LiveDisplay:
    draw.ellipse((x-2,y-2,x+2,y+2),fill=COLORS[t-1]);last=(x,y)
   result=ImageTk.PhotoImage(image,master=self.window);self.images.append(result);return result
  def paint(self,force=False):
-  rows=self.source();signature=repr((rows,self.app.store.settings(),self.course.get(),self.vehicle.get(),self.view.get(),self.search.get(),self.trips(),self.sort_key,self.desc))
+  rows=self.source();signature=repr((rows,self.app.store.settings(),self.course.get(),self.vehicle.get(),self.view.get(),self.search.get(),self.trips(),self.sort_key,self.desc,self.table_mode.get()))
   if not force and signature==self.signature:return
   self.signature=signature;self.box_Kurs['values']=['Alle']+sorted({d['course'] for d in rows});self.box_Bil['values']=['Alle']+sorted({d['vehicle'] for d in rows if self.course.get()=='Alle' or d['course']==self.course.get()});self.optimal=self.view.get()=='Optimaltur 1–2–3';trips=self.trips()
   if self.optimal:
-   data=analyse(rows,self.app.store.settings(),self.course.get(),self.vehicle.get(),trips);counts=summary(data,trips);columns=['Elev','Bil',*['T'+str(t) for t in trips],'Status','Lærer','Snitt','Forbruk %','Stopp %','Δ poeng'];stat=[counts['students'],counts['registered'],counts['complete'] if trips else '—',counts['comparable']];self.trip_controls.pack(fill='x',before=self.split,pady=(0,10));self.tree.heading('#0',text='Trend');self.tree.column('#0',width=70,minwidth=70,stretch=False)
+   data=class_ranking(analyse(rows,self.app.store.settings(),self.course.get(),self.vehicle.get(),trips),trips);counts=summary(data,trips);columns=['Plass','Elev','Bil',*['T'+str(t) for t in trips],'Snitt','Δ poeng',*['Forbruk T'+str(t) for t in trips],*['Forbedring 1→'+str(t) for t in trips if t!=1],*['Min T'+str(t) for t in trips],*['Stopp T'+str(t) for t in trips],'Status']
+   if self.table_mode.get()=='Alle data':columns+=['Lærer',*[label+' T'+str(t) for label in ['Km','Liter','Km/t',*LABELS] for t in trips]]
+   stat=[counts['students'],counts['registered'],counts['complete'] if trips else '—',counts['comparable']];self.trip_controls.pack(fill='x',before=self.split,pady=(0,10));self.tree.heading('#0',text='Trend');self.tree.column('#0',width=70,minwidth=70,stretch=False)
   else:
    n=4 if self.view.get()==trip_name(4) else 5;data=[d for d in rows if d['trip']==n and (self.course.get()=='Alle' or d['course']==self.course.get()) and (self.vehicle.get()=='Alle' or d['vehicle']==self.vehicle.get())];columns=['Elev','Bil','Dato','Tid','Distanse','Status'];stat=[len({(d['course'],d['driver']) for d in data}),len(data),sum(d.get('completion')!='incomplete' for d in data),'—'];self.trip_controls.pack_forget();self.tree.column('#0',width=0,minwidth=0,stretch=False);self.tree.heading('#0',text='')
   for label,title in zip(self.stat_titles,('ELEVER','REGISTRERTE OPTIMALTURER' if self.optimal else 'REGISTRERTE TURER','FERDIG MED VALGTE TURER' if self.optimal else 'FERDIGE REGISTRERINGER','SAMMENLIGNBARE ELEVER' if self.optimal else 'ENKELTVISNING')):label.configure(text=title)
   for var,v in zip(self.stats,stat):var.set(str(v))
   query=self.search.get().strip().casefold();self.data=[d for d in data if query in (d['driver']+' '+d['course']+' '+' '.join(d['teachers'] if self.optimal else [d.get('teacher','')])).casefold()]
   def sort(d):
-   if self.sort_key=='Elev':v=d['driver'].casefold()
+   if self.sort_key=='Plass' and self.optimal:v=d['place']
+   elif self.optimal and self.sort_key not in ('Elev','Bil','Snitt','Δ poeng'):v=self.table_values(d,trips).get(self.sort_key)
+   elif self.sort_key=='Elev':v=d['driver'].casefold()
    elif self.sort_key=='Bil':v=' '.join(d['cars']) if self.optimal else d['vehicle']
    elif self.sort_key.startswith('T') and self.sort_key[1:].isdigit() and self.optimal:v=d['points'].get(int(self.sort_key[1:]))
    elif self.sort_key=='Status' and self.optimal:v=self.registration_status(d,trips)
@@ -92,19 +99,42 @@ class LiveDisplay:
   # Missing scores are always last, independently of sort direction.
   available=[d for d in self.data if not sort(d)[0]];missing=[d for d in self.data if sort(d)[0]];self.data=sorted(available,key=sort,reverse=self.desc)+missing
   position=self.tree.yview()[0];self.tree['columns']=columns
-  for name in columns:self.tree.heading(name,text=name,command=lambda name=name:self.sort_by(name));self.tree.column(name,width=158 if name=='Elev' else 125 if name in ('Bil','Lærer','Status') else 77 if name in ('Forbruk %','Stopp %') else 65,minwidth=50,stretch=name in ('Elev','Bil'))
+  for name in columns:self.tree.heading(name,text=name,command=lambda name=name:self.sort_by(name));self.tree.column(name,width=155 if name=='Elev' else 110 if name in ('Bil','Lærer','Status') or name.startswith('Forbedring') else 85 if name.startswith('Forbruk') else 62,minwidth=45,stretch=name in ('Elev','Bil'))
   self.tree.delete(*self.tree.get_children());self.lookup={};self.images=[]
   for i,d in enumerate(self.data):
    if self.optimal:
-    vals=[d['driver'],' → '.join(d['cars']),*[self.number(d['points'].get(t)) for t in trips],self.registration_status(d,trips),' / '.join(d['teachers']) or '—',self.number(d['average']),self.pct(d['changes']['fuel']),self.pct(d['changes']['stops']),self.number(d['delta'],signed=True)];key=d['key'];image=self.spark(d);tags=('warn',) if d['changed'] or d['ambiguous'] else ('up',) if d['delta'] is not None and d['delta']>0 else ()
+    values=self.table_values(d,trips);vals=[self.pct(values.get(col)) if col.startswith('Forbedring') else self.number(values.get(col),signed=col=='Δ poeng') if isinstance(values.get(col),(int,float)) or values.get(col) is None else values[col] for col in columns];key=d['key'];image=self.spark(d);tags=('warn',) if d['changed'] or d['ambiguous'] else ('up',) if d['delta'] is not None and d['delta']>0 else ()
    else:vals=[d['driver'],d['vehicle'],d.get('date',''),d.get('minutes','—'),d.get('km','—'),'Uferdig' if d.get('completion')=='incomplete' else 'Registrert'];key=d['id'];image='';tags=()
    self.lookup[str(i)]=d;self.tree.insert('','end',iid=str(i),values=vals,image=image,tags=tags)
    if key==self.focus:self.tree.selection_set(str(i))
   if not self.tree.selection() and self.data:self.tree.selection_set('0')
   self.tree.yview_moveto(position);self.select()
-  sync=getattr(self.app,'last_cloud_update',None);self.footer.configure(text=f'{len(self.data)} av {len(data)} elever / aktiviteter · '+(f'Siste skyhenting {sync} · ' if sync else '')+'Poeng 0–100: felles relativ skala innen kurs og bil for optimaltur 1–3. Prosent viser faktisk endring mellom første og siste valgte tur; minus betyr reduksjon. Tid følger gjeldende vekter.')
+  sync=getattr(self.app,'last_cloud_update',None);self.footer.configure(text=f'{len(self.data)} av {len(data)} elever / aktiviteter · '+(f'Siste skyhenting {sync} · ' if sync else '')+'Poeng 0–100: felles relativ skala innen kurs og bil for optimaltur 1–3. Plassering etter snittpoeng, kun ferdige tursett innen samme kurs og bil. Forbedring 1→2/3 er reduksjon i l/100 km: positiv prosent betyr lavere forbruk. Null utgangspunkt gir —. Tid følger gjeldende vekter.')
   if not self.data:self.draw()
- def sort_by(self,name):self.desc=not self.desc if self.sort_key==name else name not in ('Elev','Bil','Dato');self.sort_key=name;self.paint(True)
+ def table_values(self,d,trips):
+  out={'Plass':d.get('place'),'Elev':d['driver'],'Bil':' → '.join(d['cars']),'Snitt':d['average'],'Δ poeng':d['delta'],'Status':self.registration_status(d,trips),'Lærer':' / '.join(d['teachers']) or '—'}
+  for t in trips:
+   r=d['history'].get(t,{})
+   out['T'+str(t)]=d['points'].get(t)
+   fuel=value(r,'fuel');out['Forbruk T'+str(t)]=None if fuel is None else 10*fuel
+   out['Forbedring 1→'+str(t)]=d['fuel_improvement'].get(t)
+   out['Min T'+str(t)]=value(r,'time')
+   for label,key in [('Stopp','stops'),('Km','km'),('Liter','liters')]:
+    try:out[label+' T'+str(t)]=float(r[key])
+    except (KeyError,TypeError,ValueError):out[label+' T'+str(t)]=None
+   out['Km/t T'+str(t)]=value(r,'speed')
+   for key,label in zip(QUAL,LABELS):out[label+' T'+str(t)]=r.get(key) or '—'
+  return out
+ def overview(self):
+  if self.analysis_open:self.split.forget(self.right)
+  self.analysis_open=False;self.back_button.pack_forget()
+ def open_analysis(self):
+  if not self.chosen():return
+  if not self.analysis_open:self.split.add(self.right,minsize=390,stretch='always')
+  self.analysis_open=True;self.back_button.pack(side='right',padx=8)
+  self.window.after_idle(lambda:self.split.sash_place(0,int(self.split.winfo_width()*.55),0))
+  self.draw()
+ def sort_by(self,name):self.desc=not self.desc if self.sort_key==name else name not in ('Elev','Bil','Dato','Plass');self.sort_key=name;self.paint(True)
  @staticmethod
  def registration_status(d,trips):
   if d['ambiguous']:return 'Flere registreringer'

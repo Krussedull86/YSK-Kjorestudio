@@ -27,6 +27,11 @@ class Base:
  def show_distribution(self,*args):pass
 root=tk.Tk();errors=[];root.report_callback_exception=lambda cls,error,tb:errors.append(str(error));app=classroom_class(Base)(root);root.update();root.update_idletasks();view=app.dashboard_display
 assert len(view.tree.get_children())==121
+assert len(view.split.panes())==1
+view.open_analysis();root.update();assert len(view.split.panes())==2
+view.overview();root.update();assert len(view.split.panes())==1
+view.table_mode.set('Alle data');view.paint(True);root.update();assert 'Km/t T1' in view.tree['columns']
+view.table_mode.set('Poeng og målinger');view.paint(True)
 for metric in METRICS:view.metric.set(metric);view.draw();root.update()
 for column in view.tree['columns']:view.sort_by(column);root.update()
 view.trip_vars[3].set(False);view.paint(True);root.update();assert 'T3' not in view.tree['columns']
