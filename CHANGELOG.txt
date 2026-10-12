@@ -1,3 +1,23 @@
+1.13.1 / bygg 38 – PC: storskjerm med hele klasseoversikten i full bredde. Rangering innen kurs og bil, tur 1–3 poeng, forbruk, tid og stopp for alle elever. Forbruksforbedring 1→2 og 1→3 i prosent, poengendring og utviklingslinje. Alle data inkluderer fart, distanse, liter, vurderinger og lærer. Dobbeltklikk åpner elevanalyse; tilbake gir klasseoversikten. Oppdateringsvarsel tilbyr direkte nedlasting og installasjon.
+
+1.13.0 / bygg 37 – Windows: referanseinspirert klasseromsoversikt som hovedfane. Kompakt elevliste med bil, lærer, status, turpoeng, utviklingslinjer og faktiske prosentendringer. Analysefelt med valgfri linjegraf, målinger og vurderinger. Valg av tur 1–3, kurs, bil og elevsøk. Distribusjon/langtur vises enkeltvis. Bilbytte, duplikater og manglende målinger skjules ikke.
+
+1.12.7 / bygg 36 – Dev kun Android: Lagre tur beholder turskjemaet, feltene og rulleposisjonen. Ingen automatisk overgang til Mine turer eller skyoversikten etter lagring/redigering. Lokal ID beholdes, skyredigering oppdaterer forventet revisjon, og gjentatt lagring oppdaterer samme tur. Egendefinerte parameterturer beholder også skjemaet åpent. Kort lagringsbekreftelse; brukeren velger neste tur selv.
+
+1.12.6 / bygg 35 – Dev Android og Windows: manuelt skrivefelt for forbruk i l/100 km. Tomt felt beholder beregningen fra liter og distanse. Manuell verdi lagres med turen og brukes i rangering og klasserom; opprinnelig totalforbruk beholdes hvis det er skrevet inn. Tomt totalforbruk kan beregnes fra manuelt l/100 km og km ved lagring. Feltet vises i turdata, PC og papirskjema. Synkronisering oppdager endringer i manuell verdi.
+
+1.12.5 / bygg 34 – Dev kun Android: Ny tur slår opp registrert aktivitet når elev/kurs/bil velges fra listen eller turnummer velges. Treff hentes fra skyen og lokalt; ventende lokale endringer beholdes. Flere treff krever valg. Registrert tur åpnes med alle målinger og eksisterende ID/revisjon. Nye målinger erstattes bare etter bekreftelse. Bytte fra en åpnet optimalaktivitet til et annet turnummer lager et nytt oppslag uten å flytte den opprinnelige turen.
+
+1.12.4 / bygg 33 – Dev kun Android: Etterregistrer tur i menyen og historikken, med faktisk dato og målinger uten å starte klokken. Se alle turdata åpner en lesbar oversikt før redigering. Hent registrerte turer fra skyen og søk elev, kurs, bil, dato eller tur. Manuell etterregistrering og redigering av ferdige distribusjonslogger med stopp, faktiske stopptider, status, kommentarer og retur. Tidsrekkefølge og avslutning valideres. Tilgang og revisjonskontroll beholdes.
+
+1.12.3 / bygg 32 – Dev kun Android: vanlig tidtaking og distribusjonsstatus tillates vist på låseskjermen, med klokke, pause, antall stans og neste leveringsstopp/retur. Varselet inneholder ikke elevnavn eller kommentarer. Innstillinger har Varsler / status på låseskjerm. Androids egne innstillinger bestemmer om låseskjermvarsler er tillatt.
+
+1.12.2 / bygg 31 – Dev Android og Windows: registrerte distribusjonsstopp kan endres mellom Rygget til rampe og Avbrutt, med redigerbar kommentar. Gjelder pågående og avsluttede turer. Opprinnelige stopptider, returtid og totaltid beholdes. Lagre tur etter endringen for synkronisering.
+
+1.12.1 / bygg 30 – Dev Android og Windows: tom gjennomsnittsfart vises i grønt som beregnet fra km og total tid, inkludert stopp. Manuell fart og - beholdes. PC får skjemaoppretter med kurs, redigerbar elevliste, valgte turer, alle parametre, ferdig navn, signaturfelt og distribusjonsstopp. Utskriftsklare A4-PDF-er med fortsettelsessider og navn på hver side.
+
+1.12.0 / bygg 29 – Dev Android og Windows: parameterbank, versjonerte turmaler og egendefinerte parameterturer. Admin velger felt, krav, grafer, faste poenggrenser og vekting samt turmaler per kurs. Gamle turer beholder sitt oppsett. Lokale utkast og ventende innsending beholdes. PC har analyse av sammenlignbare parameterturer. Automatisk oppdateringssjekk etter innlogging ved oppstart varsler ny tilgjengelig utgave.
+
 1.11.0 / bygg 28 – Dev Windows: ny kompakt klasseromsvisning med alle elever i rullbar liste, poeng for optimaltur 1–2–3 og analysefelt med linjegrafer og prosentvis endring. Felles relativ poengskala innen kurs og bil for de tre turene, med gjeldende vekter. Bilbytte og manglende verdier merkes. Distribusjon og langtur vises separat med turdata og leveringsstopp. Åpnes via Vis på storskjerm.
 
 1.10.0 / bygg 26 – Dev: tilbakemeldinger/forslag og feilmeldinger fra Android og PC. Meldinger med navn, versjon og enhetsinfo lagres i skolens admininnboks. Admin kan lese, filtrere, endre status og konfigurere to separate Discord-webhooks. Discord-feil mister ikke meldingen; admin kan prøve sending på nytt. Webhook-adressene holdes på serveren.

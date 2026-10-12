@@ -1,0 +1,44 @@
+name: YSK PC stable 1.13.1
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/pc-stable-release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ysk-pc-stable-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+          run-id: 38279937771
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: tested
+      - name: Verify tested executable
+        run: |
+          python - <<'PY'
+          import hashlib,pathlib
+          data=pathlib.Path('tested/YSK_Kjorestudio.exe').read_bytes()
+          expected='db78a376e4468dc5691748a1d3c5cbb104ad9c4009889949149e12e8c35a39c0'
+          if hashlib.sha256(data).hexdigest()!=expected:raise SystemExit('SHA-256 mismatch')
+          p=pathlib.Path('stable');p.mkdir()
+          name='YSK_Kjorestudio_Windows_1.13.1.exe'
+          (p/name).write_bytes(data)
+          (p/'SHA256SUMS.txt').write_text(expected+'  '+name+'\n')
+          PY
+      - name: Publish stable PC release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view v1.13.1 >/dev/null 2>&1; then
+            gh release create v1.13.1 --target "$GITHUB_SHA" --title "YSK Kjørestudio PC 1.13.1 – klasseoversikt og rangering" --notes-file marketing/pc-1.13.1.md --draft
+          fi
+          gh release upload v1.13.1 stable/* --clobber
+          gh release edit v1.13.1 --draft=false --latest --notes-file marketing/pc-1.13.1.md

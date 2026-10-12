@@ -27,6 +27,13 @@ class Store:
   with self.conn() as c:c.execute('INSERT OR REPLACE INTO settings VALUES (1,?)',(json.dumps(w),))
  def validate(self,d):
   d=dict(d)
+  raw=d.get('fuel_per_100','')
+  if raw is not None and str(raw).strip():
+   value=float(str(raw).replace(',','.'))
+   if not math.isfinite(value) or value<0:raise ValueError('Forbruk per 100 km må være et endelig tall, minst null.')
+   d['fuel_per_100']=value
+   if not str(d.get('liters','') or '').strip() and str(d.get('km','') or '').strip() not in ('','-'):d['liters']=value*float(str(d['km']).replace(',','.'))/100
+  else:d.pop('fuel_per_100',None)
   missing=set(missing_fields(d))
   omitted={k for k in ['minutes','km','liters','stops',*QUAL,'average_speed','date','start_time'] if str(d.get(k,'')).strip()=='-'}
   placeholders=(missing|omitted)-{'driver','course','vehicle','teacher'}
@@ -87,7 +94,7 @@ class Store:
    with dst:src.backup(dst)
 def scorable(d):
  return d.get('completion')!='incomplete' and all(isinstance(d.get(k),(int,float)) and math.isfinite(d[k]) for k in ['minutes','km','liters','stops']) and d['minutes']>0 and d['km']>0 and d.get('average_speed')!='-' and all(d.get(k) in ['Bra','Middel','Svak'] for k in QUAL)
-def metrics(d):return {'tid':d['minutes']/d['km'],'forbruk':d['liters']/d['km'],'stopp':d['stops']/d['km'],'forbruk10':10*d['liters']/d['km'],'fart':d.get('average_speed',60*d['km']/d['minutes'])}
+def metrics(d):return {'tid':d['minutes']/d['km'],'forbruk':d.get('fuel_per_100',100*d['liters']/d['km'])/100,'stopp':d['stops']/d['km'],'forbruk10':d.get('fuel_per_100',100*d['liters']/d['km'])/10,'fart':d.get('average_speed',60*d['km']/d['minutes'])}
 def ranking(rows,w):
  # Compute comparison ranges once per course / vehicle / trip.
  groups={};measured=[]

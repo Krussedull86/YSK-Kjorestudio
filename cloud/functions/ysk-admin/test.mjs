@@ -3,7 +3,8 @@ const validators=fs.readFileSync(new URL('./distribution.ts',import.meta.url),'u
 const trips=fs.readFileSync(new URL('./trips.ts',import.meta.url),'utf8').replace('export async function','async function').replace(/^import .*$/gm,'');
 const schools=fs.readFileSync(new URL('./schools.ts',import.meta.url),'utf8').replaceAll('export async function','async function');
 const feedback=fs.readFileSync(new URL('./feedback.ts',import.meta.url),'utf8').replaceAll('export function','function').replaceAll('export async function','async function');
-const source=feedback+'\n'+validators+'\n'+schools+'\n'+trips+'\n'+fs.readFileSync(new URL('./updates.ts',import.meta.url),'utf8').replace('export async function','async function').replace(/^import .*$/gm,'')+'\n'+fs.readFileSync(new URL('./index.ts',import.meta.url),'utf8').replace(/^import .*$/gm,'');
+const templates=fs.readFileSync(new URL('./templates.ts',import.meta.url),'utf8').replaceAll('export function','function').replaceAll('export async function','async function');
+const source=templates+'\n'+feedback+'\n'+validators+'\n'+schools+'\n'+trips+'\n'+fs.readFileSync(new URL('./updates.ts',import.meta.url),'utf8').replace('export async function','async function').replace(/^import .*$/gm,'')+'\n'+fs.readFileSync(new URL('./index.ts',import.meta.url),'utf8').replace(/^import .*$/gm,'');
 async function scenario({role='admin',active=true,valid=true,target=true,insertFails=false,created=true},body){
  let handler;const calls=[];
  const fetch=async(url,options={})=>{calls.push({url,options});let payload,status=200;

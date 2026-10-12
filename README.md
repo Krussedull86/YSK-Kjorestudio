@@ -68,3 +68,20 @@ Android: meny → **Tilbakemelding / feilmelding**. PC: fanen **Tilbakemelding**
 PC-admin: **Admin / lærere → Tilbakemeldinger / feilmeldinger**. Android-admin har samme innboks fra læreradministrasjonen. Admin kan merke Ny, Under behandling eller Ferdig, lese hele meldingen og se Discord-leveringen. Innboksen tilhører brukerens egen skole.
 
 I innboksen: **Discord · 2 webhooks**. Lim inn en Discord-webhook for **Tilbakemelding / forslag** og en for **Feilmelding**. Tomt felt beholder eksisterende; Deaktiver slår den av. Adressene lagres på serveren og leses ikke tilbake til klienten. Uten webhooks fungerer admininnboksen som vanlig. Sending til Discord feiler uavhengig av lagring; **Prøv Discord på nytt** brukes av admin. Ingen Discord-omtaler/pinger sendes. Maks ti nye meldinger per bruker per time.
+
+
+## Turmaler og parameterbank (dev 1.12)
+PC: Turmaler / egendefinerte turer. Android: menyen med samme navn. Nye parameterturer registreres her; klassiske turer og distribusjon beholder eksisterende registrering og historikk.
+Admin kan endre standardmalene, opprette egne maler, velge 1–40 parametre og sette krav, grafvisning og vekting. Banken har standardfeltene samt rygging, lasting, venting, lastvekt, lastsikring og avvik. Nye parametre kan være tall, heltall, minutter/tidtakning, vurdering, ja/nei, valgliste, tekst eller beregnet forbruk per mil (krever distanse og liter).
+Faste poenggrenser på nye tallparametre velges av admin: min, maks og høyere/lavere er bedre. Standardmalenes tallparametre starter uten poengvekt til grensene er satt; vurderingene har standardvekter. Score gjelder bare vektede felt. Utelatte vektede felt gir ingen samlet score. Modellen er forskjellig fra klassiske relative poeng.
+Hver malendring lagrer en ny versjon. Gamle parameterturer bruker originalt oppsett. PC-knappen Klasserom / analyse sammenligner samme skole, kurs, bil, elev, malversjon og identiske felt/vekter. Optimaltur 1–3 kan sammenlignes når disse samsvarer. Egne maler må ha samme mal-ID. Kursvalg av maler lagres separat fra klassiske aktive turer og kontrolleres ved ny registrering.
+Utkast lagres lokalt per skole og bruker. En ventende innsending beholdes ved nettfeil og må sendes eller korrigeres før ny tur. PC prøver på nytt ved Hent / synkroniser; Android har Send ventende tur. Revisjonsnummer beskytter mot samtidige endringer. Lærere leser egne parameterturer; admin ser skolens.
+Etter innlogging ved oppstart sjekkes brukerens kanal automatisk. Ny tilgjengelig oppdatering varsles; installasjonen velges av brukeren.
+
+
+### Papirskjema og gjennomsnittsfart (dev 1.12.1)
+I **Turmaler / egendefinerte turer → Lag papirskjema / PDF** velges kurs, elevnavn og turer. Elevlisten kan redigeres og nye elever kan legges til før de har kjørt. Listen huskes lokalt for den innloggede brukeren. Velg vanlige turer 1–5 eller skolens turmaler. PDF-en inneholder alle valgte parametre, navn, valgfritt dato/bil/lærer, signaturlinje og distribusjonsstopp fra kursoppsettet. Skjemaene er blanke for håndskrift. Hver elev starter på en ny A4-side, lange skjemaer fortsetter på flere sider.
+
+Tom gjennomsnittsfart vises i grønt som beregnet km × 60 / minutter, inkludert stopp og pauser i oppgitt total tid. Et manuelt tall overstyrer beregningen, og `-` gir ingen beregnet fart. I parameterturer sendes beregnet fart ved lagring; utkastet beholder tomt felt slik at forhåndsvisningen følger endringer i distanse og tid. Fart gir ikke poeng i standardoppsettet.
+
+Windows-builden inkluderer ReportLab 4.4.9 for PDF-eksport. Ved kjøring fra kildekode: `python -m pip install reportlab==4.4.9`.
