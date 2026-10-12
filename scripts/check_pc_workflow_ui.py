@@ -19,6 +19,17 @@ with tempfile.TemporaryDirectory() as tmp,patch.object(main,'DATA',Path(tmp)),pa
  app.reset()
  for key in ('driver','course','vehicle'):app.fields[key].set(d[key])
  app.workflow.lookup();root.update();assert app.edit_id==first;assert float(app.fields['liters'].get())==10
+ app.fields['start_time'].set('08:15');app.fields['end_time'].set('09:40');app.workflow.auto_time.set(True)
+ with patch('tkinter.messagebox.showerror') as error:
+  app.save();error.assert_not_called()
+ assert app.store.all(True)[0]['minutes']==85;assert app.store.all(True)[0]['end_time']=='09:40'
+ app.workflow.auto_time.set(False);app.fields['minutes'].set('90')
+ with patch('tkinter.messagebox.showerror') as error:app.save();error.assert_not_called()
+ assert app.store.all(True)[0]['minutes']==90
+ app.edit_revision='original';app.fields['liters'].set('')
+ with patch('tkinter.messagebox.showerror') as error:app.save();error.assert_not_called()
+ assert app.store.all(True)[0]['completion']=='incomplete'
+ assert app.store.all(True)[0]['pc_draft_revision']=='original'
  app.workflow.start();assert app.workflow.clock.started is not None
  app.workflow.pause();assert app.workflow.clock.started is None
  app.workflow.stop();root.update()

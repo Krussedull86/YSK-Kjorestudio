@@ -4,12 +4,20 @@ QUAL = ['trafikksikkerhet','avpassing','økning','komfort']
 WEIGHTS = {'tid':10,'forbruk':30,'stopp':10,'trafikksikkerhet':25,'avpassing':10,'økning':5,'komfort':10}
 COMPLETION_KEYS = ['driver','course','vehicle','minutes','km','liters','stops',*QUAL,'date','start_time','teacher']
 def missing_fields(d):
- return [k for k in COMPLETION_KEYS if d.get(k) is None or not str(d[k]).strip()]
+ return [k for k in COMPLETION_KEYS if d.get(k) is None or not str(d[k]).strip()]+(['distribution'] if isinstance(d.get('distribution'),dict) and d['distribution'].get('finished_minutes') is None else [])
 class Store:
  def __init__(self,path):
   self.path=str(path); Path(path).parent.mkdir(parents=True,exist_ok=True)
   with self.conn() as c:
+   c.execute('BEGIN IMMEDIATE')
    c.execute('CREATE TABLE IF NOT EXISTS trips (id TEXT PRIMARY KEY, driver TEXT NOT NULL, course TEXT NOT NULL, vehicle TEXT NOT NULL, trip INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(driver,course,vehicle,trip))')
+   schema=c.execute("SELECT sql FROM sqlite_master WHERE name='trips'").fetchone()[0]
+   if 'UNIQUE(driver,course,vehicle,trip)' in schema:
+    c.execute('ALTER TABLE trips RENAME TO trips_before_drafts')
+    c.execute('CREATE TABLE trips (id TEXT PRIMARY KEY, driver TEXT NOT NULL, course TEXT NOT NULL, vehicle TEXT NOT NULL, trip INTEGER NOT NULL, payload TEXT NOT NULL)')
+    c.execute('INSERT INTO trips SELECT * FROM trips_before_drafts')
+    c.execute('DROP TABLE trips_before_drafts')
+   c.execute("CREATE UNIQUE INDEX IF NOT EXISTS identified_trip ON trips(driver,course,vehicle,trip) WHERE driver<>'' AND course<>'' AND vehicle<>''")
    c.execute('CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY, payload TEXT)')
  @contextlib.contextmanager
  def conn(self):
@@ -34,13 +42,16 @@ class Store:
    d['fuel_per_100']=value
    if not str(d.get('liters','') or '').strip() and str(d.get('km','') or '').strip() not in ('','-'):d['liters']=value*float(str(d['km']).replace(',','.'))/100
   else:d.pop('fuel_per_100',None)
+  if str(d.get('end_time','')).strip() not in ('','-'):
+   from trip_times import clock_text
+   d['end_time']=clock_text(d['end_time'])
   missing=set(missing_fields(d))
   omitted={k for k in ['minutes','km','liters','stops',*QUAL,'average_speed','date','start_time'] if str(d.get(k,'')).strip()=='-'}
-  placeholders=(missing|omitted)-{'driver','course','vehicle','teacher'}
+  placeholders=(missing|omitted)-{'driver','course','vehicle','teacher','distribution'}
   for k in placeholders:d[k]='Middel' if k in QUAL else '' if k in ['date','start_time','average_speed'] else 1
   for k in ['driver','course','vehicle']:
    d[k]=str(d.get(k,'')).strip()
-   if not d[k] or len(d[k])>100: raise ValueError('Fyll inn sjåfør, kurs og kjøretøy (maks 100 tegn).')
+   if len(d[k])>100: raise ValueError('Fyll inn sjåfør, kurs og kjøretøy (maks 100 tegn).')
   for k in QUAL:
    if d.get(k)=='Middels':d[k]='Middel'
   if ':' in str(d.get('minutes','')):
@@ -81,7 +92,7 @@ class Store:
   d=self.validate(d)
   with (self.conn() if connection is None else contextlib.nullcontext(connection)) as c:
    old=c.execute('SELECT id FROM trips WHERE driver=? AND course=? AND vehicle=? AND trip=?',(d['driver'],d['course'],d['vehicle'],d['trip'])).fetchone()
-   if old and old[0]!=d['id']:raise ValueError('Denne turen finnes allerede. Åpne den for å endre.')
+   if all(d[k] for k in ('driver','course','vehicle')) and old and old[0]!=d['id']:raise ValueError('Denne turen finnes allerede. Åpne den for å endre.')
    c.execute('INSERT INTO trips VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET driver=excluded.driver,course=excluded.course,vehicle=excluded.vehicle,trip=excluded.trip,payload=excluded.payload',(d['id'],d['driver'],d['course'],d['vehicle'],d['trip'],json.dumps(d,ensure_ascii=False)))
   return d
  def all(self,include_unscored=False):

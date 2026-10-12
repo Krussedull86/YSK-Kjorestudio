@@ -69,10 +69,10 @@ class App:
   register=ttk.Frame(nb,padding=15);overview=ttk.Frame(nb,padding=10);progress=ttk.Frame(nb,padding=10);settings=ttk.Frame(nb,padding=15)
   for frame,title in [(register,'Registrer / rediger'),(overview,'Rangering og turer'),(progress,'Utvikling tur 1–5'),(settings,'Vekter og forklaring')]:nb.add(frame,text=title)
   self.nb=nb;self.register_frame=register;self.fields={}
-  self.catalog_boxes={};self.rating_positions={};self.compare_trips=None
-  labels=[('driver','Sjåfør ▾'),('course','Kurs / gruppe ▾'),('vehicle','Bil / sammenligningsgruppe ▾'),('trip','Tur (1–5)'),('date','Dato (ÅÅÅÅ-MM-DD)'),('start_time','Starttid (TT:MM)'),('minutes','Forbrukt tid (min eller mm:ss)'),('km','Kjørt distanse (km)'),('liters','Forbruk totalt (liter)'),('stops','Antall unødige stopp'),('average_speed','Gjennomsnitt km/t (valgfritt)'),('teacher','Lærer / signatur (navn eller initialer)'),('notes','Notater'),('trafikksikkerhet','Trafikksikkerhet'),('avpassing','Fartsavpassing'),('økning','Fartsøkning'),('komfort','Komfort'),('fuel_per_100','Forbruk l/100 km (valgfritt)')]
+  self.catalog_boxes={};self.time_entries={};self.rating_positions={};self.compare_trips=None
+  labels=[('driver','Sjåfør ▾'),('course','Kurs / gruppe ▾'),('vehicle','Bil / sammenligningsgruppe ▾'),('trip','Tur (1–5)'),('date','Dato (ÅÅÅÅ-MM-DD)'),('start_time','Starttid (tt:mm, f.eks. 08:15)'),('end_time','Sluttid (tt:mm, f.eks. 09:40)'),('minutes','Forbrukt tid (minutter, f.eks. 85)'),('km','Kjørt distanse (km)'),('liters','Forbruk totalt (liter)'),('stops','Antall unødige stopp'),('average_speed','Gjennomsnitt km/t (valgfritt)'),('teacher','Lærer / signatur (navn eller initialer)'),('notes','Notater'),('trafikksikkerhet','Trafikksikkerhet'),('avpassing','Fartsavpassing'),('økning','Fartsøkning'),('komfort','Komfort'),('fuel_per_100','Forbruk l/100 km (valgfritt)')]
   for i,(k,label) in enumerate(labels):
-   col=0 if i<9 else 2;row=i if i<9 else i-9
+   col=0 if i<10 else 2;row=i if i<10 else i-10
    ttk.Label(register,text=label).grid(row=row,column=col,sticky='w',padx=8,pady=6)
    v=tk.StringVar(value='' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
    self.fields[k]=v
@@ -82,32 +82,33 @@ class App:
     widget=ttk.Combobox(register,textvariable=v,width=30);self.catalog_boxes[k]=widget
    else:widget=ttk.Entry(register,textvariable=v,width=32)
    if k=='trip':self.trip_box=widget;widget.configure(width=40)
+   if k in ('start_time','end_time','minutes'):self.time_entries[k]=widget
    widget.grid(row=row,column=col+1,sticky='ew',padx=8,pady=6)
   from speed_preview import calculated_speed
   speed_preview=tk.StringVar()
-  ttk.Label(register,textvariable=speed_preview,foreground='#16803c').grid(row=13,column=0,columnspan=4,sticky='w',padx=8,pady=4)
+  ttk.Label(register,textvariable=speed_preview,foreground='#16803c').grid(row=14,column=0,columnspan=4,sticky='w',padx=8,pady=4)
   def show_speed(*args):
    value=calculated_speed(self.fields['km'].get(),self.fields['minutes'].get(),self.fields['average_speed'].get())
    speed_preview.set(f'Beregnet gjennomsnittsfart: {value:.1f} km/t (inkludert stopp)' if value is not None else '')
   for key in ('km','minutes','average_speed'):self.fields[key].trace_add('write',show_speed)
   self.fields['course'].trace_add('write',lambda *a:self.update_trip_choices())
-  ttk.Button(register,text='Vis distribusjonsstopp',command=self.show_edit_distribution).grid(row=12,column=3,pady=6)
-  ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=12,column=1,pady=6)
+  ttk.Button(register,text='Vis distribusjonsstopp',command=self.show_edit_distribution).grid(row=13,column=3,pady=6)
+  ttk.Button(register,text='Kursoppsett',command=self.setup_course).grid(row=13,column=1,pady=6)
   self.preview=tk.StringVar(value='Forbruk per 10 km beregnes fra liter og distanse. Kjørepoeng vises i rangeringen.')
-  ttk.Label(register,textvariable=self.preview,wraplength=600).grid(row=9,column=0,columnspan=4,pady=6)
+  ttk.Label(register,textvariable=self.preview,wraplength=600).grid(row=10,column=0,columnspan=4,pady=6)
   def preview(*args):
    try:self.preview.set(f"Forbruk per 10 km: {10*float(self.fields['liters'].get().replace(',','.'))/float(self.fields['km'].get().replace(',','.')):.2f} liter · Kjørepoeng beregnes i rangeringen")
    except (ValueError,ZeroDivisionError):self.preview.set('Forbruk per 10 km beregnes fra liter og distanse. Kjørepoeng vises i rangeringen.')
-  fuel_preview=tk.StringVar();ttk.Label(register,textvariable=fuel_preview,foreground='#16803c').grid(row=14,column=0,columnspan=4,sticky='w',padx=8,pady=4)
+  fuel_preview=tk.StringVar();ttk.Label(register,textvariable=fuel_preview,foreground='#16803c').grid(row=15,column=0,columnspan=4,sticky='w',padx=8,pady=4)
   def preview_fuel(*args):
    try:
     value=100*float(self.fields['liters'].get().replace(',','.'))/float(self.fields['km'].get().replace(',','.'));fuel_preview.set(f'Beregnet forbruk: {value:.2f} l/100 km. Manuelt felt brukes i sammenligningen.' if self.fields['fuel_per_100'].get().strip() else f'Beregnet forbruk: {value:.2f} l/100 km')
    except (ValueError,ZeroDivisionError):fuel_preview.set('Tomt totalforbruk beregnes fra manuelt l/100 km og distanse ved lagring.')
   for k in ['liters','km','fuel_per_100']:self.fields[k].trace_add('write',preview_fuel)
   for k in ['liters','km']:self.fields[k].trace_add('write',preview)
-  ttk.Button(register,text='Lagre tur',command=self.save).grid(row=10,column=1,pady=12,sticky='ew')
-  ttk.Button(register,text='Ny registrering',command=self.reset).grid(row=10,column=3,pady=12,sticky='ew')
-  self.editlabel=tk.StringVar(value='Ny tur');ttk.Label(register,textvariable=self.editlabel).grid(row=11,column=1,columnspan=3)
+  ttk.Button(register,text='Lagre tur',command=self.save).grid(row=11,column=1,pady=12,sticky='ew')
+  ttk.Button(register,text='Ny registrering',command=self.reset).grid(row=11,column=3,pady=12,sticky='ew')
+  self.editlabel=tk.StringVar(value='Ny tur');ttk.Label(register,textvariable=self.editlabel).grid(row=12,column=1,columnspan=3)
   filters=ttk.Frame(overview);filters.pack(fill='x');self.filters={}
   for k,label in [('course','Kurs'),('vehicle','Kjøretøy'),('trip','Tur')]:
    ttk.Label(filters,text=label).pack(side='left',padx=4);v=tk.StringVar(value='Alle');box=ttk.Combobox(filters,textvariable=v,width=19,state='readonly');box.pack(side='left',padx=4);box.bind('<<ComboboxSelected>>',lambda e:self.refresh());self.filters[k]=(v,box)
@@ -180,7 +181,7 @@ class App:
   self.form_generation=getattr(self,'form_generation',0)+1
   if hasattr(self,'workflow'):
    from pc_workflow import ElapsedClock
-   self.workflow.clock=ElapsedClock()
+   self.workflow.clock=ElapsedClock();self.workflow.auto_time.set(True)
   self.edit_id=None;self.edit_distribution=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
    if k not in ['course','vehicle']:v.set('' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
@@ -188,14 +189,14 @@ class App:
   try:
    if hasattr(self,'workflow') and self.workflow.clock.started is not None:raise ValueError('Stopp tidtakingen før lagring.')
    d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id;d['trip']=trip_number(d['trip'])
+   if hasattr(self,'workflow'):d=self.workflow.prepare(d)
    if self.edit_distribution is not None:d['distribution']=self.edit_distribution
    if not self.edit_id and d['trip']>course_count(self.store,d['course']):raise ValueError('Denne turen er ikke aktivert på kurset.')
    validated=self.store.validate(d)
-   if missing_fields(validated) and getattr(self,'edit_revision',''):
-    raise ValueError('Skyredigering: fullfør feltene eller bruk - før lagring. Nye uferdige turer kan lagres lokalt.')
-   if not missing_fields(validated) and hasattr(self,'management') and self.cloud_panel.receiver.load():
-    self.management.save(d,getattr(self,'edit_revision',''));return
-   saved=self.store.save(validated);self.edit_id=saved['id'];self.refresh();self.editlabel.set('Lagret lokalt · uferdig tur' if missing_fields(validated) else 'Lagret lokalt · fortsett å redigere samme tur')
+   if self.edit_id and getattr(self,'edit_revision',''):validated['pc_draft_revision']=self.edit_revision
+   if hasattr(self,'management') and self.cloud_panel.receiver.load():
+    self.management.save(validated,getattr(self,'edit_revision',''));return
+   saved=self.store.save(validated);self.edit_id=saved['id'];self.refresh();self.editlabel.set('Lagret lokalt · uferdig tur. Finn den under Registrerte turer / rediger.' if missing_fields(validated) else 'Lagret lokalt · fortsett å redigere samme tur')
   except Exception as e:messagebox.showerror('Kunne ikke lagre',str(e))
  def edit(self):
   ids=self.table.selection()
@@ -209,6 +210,8 @@ class App:
   self.edit_id=d['id'];self.edit_distribution=d.get('distribution');self.edit_revision=''
   if hasattr(self,'cloud_panel'):
    remote=self.cloud_panel.receiver.remote(d['id']);self.edit_revision=remote.get('revision','') if remote else ''
+  if 'pc_draft_revision' in d:self.edit_revision=d['pc_draft_revision']
+  if hasattr(self,'workflow'):self.workflow.auto_time.set(d.get('duration_source')=='clock')
   for k,v in self.fields.items():v.set(trip_name(d['trip']) if k=='trip' else d.get(k,''))
   self.update_trip_choices()
   self.editlabel.set('Redigerer eksisterende tur');self.nb.select(self.register_frame)
@@ -217,6 +220,8 @@ class App:
   if not ids:return
   if hasattr(self,'management'):
    remote=self.cloud_panel.receiver.remote(ids[0])
+   if self.cloud_panel.receiver.pending(ids[0]):
+    messagebox.showinfo('Turen venter på sending','Synkroniser turen før du sletter den. Utkastet er beholdt.');return
    if remote:
     if messagebox.askyesno('Slett tur','Flytte den valgte turen til papirkurven i skyen?'):
      self.management.action('trip_delete',id=ids[0],expected_revision=remote['revision'])

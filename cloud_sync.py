@@ -1,5 +1,5 @@
 """Cloud sync and authenticated trip management. Local edits are protected from overwrite."""
-import base64,ctypes,hashlib,json,os,queue,threading,time,urllib.request,urllib.error,urllib.parse
+import uuid,base64,ctypes,hashlib,json,os,queue,threading,time,urllib.request,urllib.error,urllib.parse
 from pathlib import Path
 from tkinter import ttk,messagebox
 import tkinter as tk
@@ -7,9 +7,11 @@ import tkinter as tk
 DEFAULT_URL='https://otuemdgmymgognzghmnu.supabase.co'
 DEFAULT_API='sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu'
 
-FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','fuel_per_100','distribution']
+FIELDS=['driver','course','vehicle','trip','minutes','km','liters','stops','trafikksikkerhet','avpassing','økning','komfort','notes','date','start_time','teacher','average_speed','fuel_per_100','distribution','end_time','duration_source']
 def fingerprint(d):
  values={k:d.get(k,'') for k in FIELDS}
+ for k in ('end_time','duration_source'):
+  if not values[k]:values.pop(k)
  if values.get('fuel_per_100') is None or not str(values.get('fuel_per_100','')).strip():values.pop('fuel_per_100',None)
  if str(values.get('average_speed','')).strip() not in ['', '-']:values['average_speed']=float(values['average_speed'])
  for k in ['trip','minutes','km','liters','stops','fuel_per_100']:
@@ -59,8 +61,11 @@ class APIError(ValueError):
 
 class Receiver:
  def __init__(self,store,path):
-  self.store=store;self.path=Path(path);self.lock=threading.Lock()
+  self.store=store;self.path=Path(path);self.lock=threading.RLock()
   with store.conn() as c:
+   c.execute("CREATE TABLE IF NOT EXISTS cloud_outbox (id TEXT PRIMARY KEY, owner TEXT NOT NULL, payload TEXT NOT NULL, revision TEXT NOT NULL, expected TEXT NOT NULL, error TEXT NOT NULL DEFAULT '')")
+   c.execute('CREATE TABLE IF NOT EXISTS cloud_ack (id TEXT, base TEXT, revision TEXT, PRIMARY KEY(id,base))')
+   c.execute('CREATE TABLE IF NOT EXISTS cloud_flights (id TEXT PRIMARY KEY, owner TEXT NOT NULL, payload TEXT NOT NULL, revision TEXT NOT NULL, expected TEXT NOT NULL)')
    c.execute('CREATE TABLE IF NOT EXISTS cloud_seen (id TEXT PRIMARY KEY, remote_hash TEXT, local_hash TEXT)')
    c.execute('CREATE TABLE IF NOT EXISTS cloud_binding (id INTEGER PRIMARY KEY, account TEXT)')
    c.execute('CREATE TABLE IF NOT EXISTS cloud_conflicts (id TEXT PRIMARY KEY, message TEXT)')
@@ -134,12 +139,77 @@ class Receiver:
   for offset in range(0,100000000,500):
    page=self.admin('trip_list',offset=offset)['rows'];rows.extend(page)
    if len(page)<500:return rows
+ def queue_trip(self,d,expected_revision=''):
+  cfg=self.load()
+  if not cfg:raise LoginRequired('Logg inn før du legger turen i sendekøen.')
+  owner=cfg['url']+'|'+cfg['session']['user']['id']
+  validated=self.store.validate(d);ident=validated['id']
+  with self.store.conn() as c:
+   c.execute('BEGIN IMMEDIATE')
+   old=c.execute('SELECT owner,expected FROM cloud_outbox WHERE id=?',(ident,)).fetchone()
+   if old and old[0]!=owner:raise ValueError('Turen venter på sending fra en annen konto.')
+   expected=old[1] if old else expected_revision
+   if not old:
+    for _ in range(100):
+     ack=c.execute('SELECT revision FROM cloud_ack WHERE id=? AND base=?',(ident,expected)).fetchone()
+     if not ack or ack[0]==expected:break
+     expected=ack[0]
+   validated['pc_draft_revision']=expected
+   saved=self.store.save(validated,connection=c)
+   payload=dict(saved);payload.pop('pc_draft_revision',None)
+   c.execute("INSERT OR REPLACE INTO cloud_outbox VALUES(?,?,?,?,?, '')",(ident,owner,json.dumps(payload,ensure_ascii=False),str(uuid.uuid4()),expected))
+  return saved
+ def pending(self,id):
+  with self.store.conn() as c:return c.execute('SELECT 1 FROM cloud_outbox WHERE id=?',(id,)).fetchone() is not None
+ def send_queued(self,id):
+  # Persist the exact in-flight request until acknowledged, including across restarts.
+  # A newer local save stays queued while an older request is being acknowledged.
+  with self.lock:
+   cfg=self.load()
+   if not cfg:raise LoginRequired('Logg inn først.')
+   owner=cfg['url']+'|'+cfg['session']['user']['id']
+   with self.store.conn() as c:
+    c.execute('BEGIN IMMEDIATE')
+    queued=c.execute('SELECT owner,payload,revision,expected FROM cloud_outbox WHERE id=?',(id,)).fetchone()
+    if not queued:return {'row':self.remote(id)}
+    if queued[0]!=owner:raise LoginRequired('Logg inn med kontoen som lagret utkastet.')
+    flight=c.execute('SELECT owner,payload,revision,expected FROM cloud_flights WHERE id=?',(id,)).fetchone()
+    if not flight:
+     flight=queued;c.execute('INSERT INTO cloud_flights VALUES(?,?,?,?,?)',(id,*flight))
+   try:result=self.admin('trip_save',payload=json.loads(flight[1]),revision=flight[2],expected_revision=flight[3])
+   except Exception as error:
+    with self.store.conn() as c:
+     c.execute('UPDATE cloud_outbox SET error=? WHERE id=?',(str(error),id))
+     if isinstance(error,APIError) and 400<=error.status<500:c.execute('DELETE FROM cloud_flights WHERE id=?',(id,))
+    raise
+   remote=result['row'];payload=remote['payload'];rh=fingerprint(payload)
+   with self.store.conn() as c:
+    c.execute('BEGIN IMMEDIATE')
+    c.execute('INSERT OR REPLACE INTO cloud_ack VALUES(?,?,?)',(id,flight[3],remote['revision']))
+    current=c.execute('SELECT revision FROM cloud_outbox WHERE id=?',(id,)).fetchone()
+    c.execute('INSERT OR REPLACE INTO cloud_versions VALUES(?,?)',(id,json.dumps(remote,ensure_ascii=False)))
+    c.execute('INSERT OR REPLACE INTO cloud_seen VALUES(?,?,?)',(id,rh,rh))
+    c.execute('DELETE FROM cloud_conflicts WHERE id=?',(id,))
+    if current and current[0]==flight[2]:
+     self.store.save(payload,connection=c);c.execute('DELETE FROM cloud_outbox WHERE id=?',(id,))
+    elif current:
+     c.execute("UPDATE cloud_outbox SET expected=?,error='' WHERE id=?",(remote['revision'],id))
+     local=c.execute('SELECT payload FROM trips WHERE id=?',(id,)).fetchone()
+     if local:
+      d=json.loads(local[0]);d['pc_draft_revision']=remote['revision'];c.execute('UPDATE trips SET payload=? WHERE id=?',(json.dumps(d,ensure_ascii=False),id))
+    c.execute('DELETE FROM cloud_flights WHERE id=?',(id,))
+   return result
  def save_trip(self,d,expected_revision=''):
-  from core import missing_fields
-  validated=self.store.validate(d)
-  if missing_fields(validated):raise ValueError('Fullfør feltene eller bruk - før sending til skyen.')
-  result=self.admin('trip_save',payload=validated,expected_revision=expected_revision)
-  self.import_rows([result['row']],force=True);return result
+  saved=self.queue_trip(d,expected_revision)
+  return self.send_queued(saved['id'])
+ def flush(self,cfg):
+  owner=cfg['url']+'|'+cfg['session']['user']['id'];errors=[]
+  with self.store.conn() as c:ids=[r[0] for r in c.execute('SELECT id FROM cloud_outbox WHERE owner=?',(owner,))]
+  for id in ids:
+   try:self.send_queued(id)
+   except LoginRequired:raise
+   except Exception as error:errors.append('Venter på sending: '+str(error))
+  return errors
  def import_rows(self,rows,force=False):
   imported=0;conflicts=[]
   for remote in sorted(rows,key=lambda r:0 if r.get('deleted_at') else 1):
@@ -152,6 +222,13 @@ class Receiver:
     record=c.execute('SELECT payload FROM trips WHERE id=?',(id,)).fetchone()
     local=json.loads(record[0]) if record else None
     c.execute('INSERT OR REPLACE INTO cloud_versions VALUES(?,?)',(id,json.dumps(remote,ensure_ascii=False)))
+    pending=c.execute('SELECT 1 FROM cloud_outbox WHERE id=?',(id,)).fetchone()
+    if pending and not force:
+     if remote.get('revision')!= (local or {}).get('pc_draft_revision'):
+      message=f"{d.get('driver') or 'Utkast'}: lokale endringer venter; skyversjonen er ikke lagt over utkastet";conflicts.append(message)
+     continue
+    if force:
+     c.execute('DELETE FROM cloud_outbox WHERE id=?',(id,));c.execute('DELETE FROM cloud_flights WHERE id=?',(id,))
     if remote.get('deleted_at'):
      if local:c.execute('INSERT OR REPLACE INTO cloud_deleted_local VALUES(?,?)',(id,json.dumps(local,ensure_ascii=False)))
      c.execute('DELETE FROM trips WHERE id=?',(id,));c.execute('DELETE FROM cloud_conflicts WHERE id=?',(id,))
@@ -180,6 +257,7 @@ class Receiver:
     cfg['session']=s;self.save(cfg)
    member=self.membership(cfg);legacy=url+'|'+s['user']['id'];self.bind(url+'|school:'+member['organization_id'] if member else legacy,legacy);allrows=[];last=None
    with self.store.conn() as c:needs_full=bool(c.execute('SELECT 1 FROM cloud_seen WHERE id NOT IN (SELECT id FROM cloud_versions) LIMIT 1').fetchone())
+   send_errors=[] if force else self.flush(cfg)
    while True:
     params={'select':'id,payload,updated_at,revision,deleted_at,owner_id','order':'updated_at.asc,id.asc','limit':'500'}
     if not force and not needs_full and cfg.get('cursor'):params['updated_at']='gte.'+cfg['cursor']
@@ -190,6 +268,7 @@ class Receiver:
    from course_setup import import_courses
    if member:import_courses(self.store,request(url+'/functions/v1/ysk-admin',api,s['access_token'],{'action':'course_setup_list'})['rows'])
    n,errors=self.import_rows(allrows,force)
+   errors=send_errors+errors
    if allrows:cfg['cursor']=allrows[-1]['updated_at'];self.save(cfg)
    with self.store.conn() as c:persistent=[row[0] for row in c.execute('SELECT message FROM cloud_conflicts ORDER BY id')]
    return n,list(dict.fromkeys(errors+persistent)),True
@@ -199,15 +278,15 @@ class CloudPanel:
   self.app=app;self.root=app.root;self.receiver=Receiver(app.store,path);self.queue=queue.Queue();self.busy=False;self.closed=False;self.account_label=''
   f=ttk.Frame(app.nb,padding=24);app.nb.add(f,text='Innlogging / sky');self.frame=f
   ttk.Label(f,text='Konto og sky',font=('Segoe UI',25,'bold')).grid(row=0,column=0,columnspan=2,sticky='w',pady=12)
-  ttk.Label(f,text='Registrer i bilen, også uten dekning. PC-en henter nye turer når den er på.\nBruk e-post og passord fra administratoren. Skole og avdeling følger kontoen automatisk.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
+  ttk.Label(f,text='Registrer i bilen, også uten dekning. Telefon og PC synkroniserer både ferdige turer og lagrede utkast.\nBruk e-post og passord fra administratoren. Skole og avdeling følger kontoen automatisk.').grid(row=1,column=0,columnspan=2,sticky='w',pady=12)
   self.fields={'url':tk.StringVar(value=DEFAULT_URL),'api':tk.StringVar(value=DEFAULT_API),'password':tk.StringVar()}
   for i,(k,label) in enumerate([('email','E-post')],start=2):
    ttk.Label(f,text=label).grid(row=i,column=0,sticky='w',padx=(0,15),pady=10);v=tk.StringVar(value='https://otuemdgmymgognzghmnu.supabase.co' if k=='url' else 'sb_publishable_9-BPAUPJ5gv_MJ1hz6ah0g_yoz3npSu' if k=='api' else '');self.fields[k]=v;ttk.Entry(f,textvariable=v,width=65,state='readonly').grid(row=i,column=1,sticky='ew')
   ttk.Button(f,text='Logg ut',command=self.logout).grid(row=6,column=1,sticky='w',pady=15)
-  ttk.Button(f,text='Hent turer nå',command=self.sync).grid(row=7,column=1,sticky='w',pady=8)
+  ttk.Button(f,text='Synkroniser nå',command=self.sync).grid(row=7,column=1,sticky='w',pady=8)
   ttk.Button(f,text='Bruk telefonens versjoner ved konflikt',command=self.force).grid(row=7,column=0,sticky='w',pady=8)
   self.status=tk.StringVar(value='Ikke koblet til. Android-appen kan fortsatt lagre turer lokalt.');ttk.Label(f,textvariable=self.status,wraplength=850).grid(row=8,column=0,columnspan=2,sticky='w',pady=15)
-  ttk.Label(f,text='Automatisk henting hvert 10. sekund. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nSkole og avdeling tildeles av administrator.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
+  ttk.Label(f,text='Automatisk sending og henting hvert 10. sekund. Uferdige turer synkroniseres også. Slettede skyturer fjernes fra klasserommet.\nEn konflikt vises her og må avklares før den turen kan oppdateres fra telefonen.\nRedigering og sletting av skyturer sendes tilbake til telefonen.\nPassord lagres ikke; innloggingsøkten beskyttes av Windows-kontoen.\nSkole og avdeling tildeles av administrator.').grid(row=9,column=0,columnspan=2,sticky='w',pady=10)
   try:
    cfg=self.receiver.load()
    if not cfg:app.nb.select(f)

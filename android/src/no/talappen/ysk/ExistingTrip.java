@@ -11,7 +11,7 @@ final class ExistingTrip {
   new Thread(()->{try{
    Map<String,JSONObject> found=new LinkedHashMap<>();boolean offline=false;
    try{for(JSONObject row:Sync.managedRows(a))if(row.isNull("deleted_at")&&matches(row.getJSONObject("payload"),driver,course,vehicle,trip))found.put(row.getString("id"),new JSONObject(row.getJSONObject("payload").toString()).put("id",row.getString("id")).put("_managed",row));}catch(Exception ignored){offline=true;}
-   List<JSONObject> local=a.db.rows(false);for(JSONObject row:local)if(matches(row.getJSONObject("payload"),driver,course,vehicle,trip)&&(!row.optString("state").equals("sent")||!found.containsKey(row.getString("id"))))found.put(row.getString("id"),new JSONObject(row.getJSONObject("payload").toString()).put("id",row.getString("id")));
+   List<JSONObject> local=a.db.rows(false);for(JSONObject row:local)if(matches(row.getJSONObject("payload"),driver,course,vehicle,trip)&&(!row.optString("state").equals("sent")||!found.containsKey(row.getString("id"))))found.put(row.getString("id"),new JSONObject(row.getJSONObject("payload").toString()).put("id",row.getString("id")).put("_base_revision",row.optString("cloud_revision")));
    final List<JSONObject> results=new ArrayList<>(found.values());final boolean localOnly=offline;
    a.runOnUiThread(()->{try{if(a.isDestroyed()||!a.authenticated||request!=generation.get()||!scope.equals(a.paramTrips.accountScope())||!a.page.equals("form")||!draft.equals(a.draft().toString()))return;
     if(results.isEmpty()){android.widget.Toast.makeText(a,localOnly?"Ingen lokal aktivitet funnet. Kunne ikke sjekke skyen – bruk Hent registrerte turer når du har nett.":"Ingen tidligere registrering funnet for dette valget.",android.widget.Toast.LENGTH_LONG).show();return;}

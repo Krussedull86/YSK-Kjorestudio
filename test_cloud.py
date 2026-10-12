@@ -76,7 +76,7 @@ class CloudTests(unittest.TestCase):
   self.assertEqual(saved['liters'],7)
  def test_save_uses_expected_version_and_imports_server_response(self):
   response={'row':self.row()|{'revision':'new','deleted_at':None},'message':'Lagret'}
-  with patch.object(self.receiver,'admin',return_value=response) as call:
+  with patch.object(self.receiver,'load',return_value={'url':'https://school.example','session':{'user':{'id':'teacher'}}}),patch.object(self.receiver,'admin',return_value=response) as call:
    self.receiver.save_trip(self.d,'old');self.assertEqual(call.call_args.kwargs['expected_revision'],'old')
   self.assertEqual(self.receiver.remote(self.id)['revision'],'new');self.assertEqual(len(self.store.all()),1)
 if __name__=='__main__':unittest.main()

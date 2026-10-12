@@ -59,7 +59,7 @@ class ManagementPanel:
   if not isinstance(item,dict):return
   p=item['payload'];win=tk.Toplevel(self.app.root);win.title(p['driver']+' · Alle turdata');win.geometry('850x650')
   box=tk.Text(win,wrap='word',font=('Segoe UI',12));sy=ttk.Scrollbar(win,command=box.yview);sy.pack(side='right',fill='y');box.configure(yscrollcommand=sy.set);box.pack(fill='both',expand=True)
-  labels={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Tur','minutes':'Tid (min)','km':'Distanse (km)','liters':'Liter totalt','fuel_per_100':'Forbruk (l/100 km)','average_speed':'Gjennomsnittsfart','stops':'Unødige stopp','date':'Dato','start_time':'Starttid','teacher':'Lærer','notes':'Notater','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}
+  labels={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Tur','minutes':'Tid (min)','km':'Distanse (km)','liters':'Liter totalt','fuel_per_100':'Forbruk (l/100 km)','average_speed':'Gjennomsnittsfart','stops':'Unødige stopp','date':'Dato','start_time':'Starttid','end_time':'Sluttid','teacher':'Lærer','notes':'Notater','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}
   for k,label in labels.items():box.insert('end',label+': '+str(p.get(k,'—'))+'\n')
   box.configure(state='disabled')
   if p.get('distribution'):ttk.Button(win,text='Vis alle distribusjonsstopp',command=lambda:self.app.show_distribution(p,win)).pack(pady=8)
@@ -99,12 +99,21 @@ class ManagementPanel:
    response,data=result;self.loaded(data);self.app.refresh();self.status.set(response.get('message','Utført'))
   self.run(work,done)
  def save(self,d,expected_revision=''):
+  if self.busy:messagebox.showinfo('Venter','Vent til den pågående handlingen er ferdig før du lagrer.');return
   generation=getattr(self.app,'form_generation',0)
+  local=dict(d,pc_draft_revision=expected_revision)
+  saved=self.receiver.queue_trip(local,expected_revision);self.app.edit_id=saved['id'];self.app.refresh();self.app.editlabel.set('Lagret på PC · sender til skyen …')
+  def work():
+   try:return self.receiver.send_queued(saved['id'])
+   except Exception as error:return {'local_only':True,'error':str(error)}
   def done(result):
-   if generation==getattr(self.app,'form_generation',0):
+   if result.get('local_only'):
+    if generation==getattr(self.app,'form_generation',0):self.app.editlabel.set('Lagret på PC · ikke sendt til skyen. Ny sending prøves automatisk.')
+    messagebox.showwarning('Turen er lagret på PC','Endringene er bevart lokalt. Kunne ikke sende til skyen:\n'+result['error']+'\nNy sending prøves automatisk. Ved konflikt må du velge hvilken versjon du vil beholde.')
+   elif generation==getattr(self.app,'form_generation',0):
     row=result['row'];self.app.edit_id=row['id'];self.app.edit_revision=row['revision'];self.app.editlabel.set('Lagret i skyen · fortsett å redigere samme tur')
    self.app.refresh()
-  self.run(lambda:self.receiver.save_trip(d,expected_revision),done)
+  self.run(work,done)
  def drain(self):
   if not self.app.root.winfo_exists():return
   try:

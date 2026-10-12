@@ -209,7 +209,7 @@ class LiveDisplay:
   if not d:return
   win=tk.Toplevel(self.window);win.title(d['driver']+' · Alle turdata');win.geometry('850x650');frame=ttk.Frame(win);frame.pack(fill='both',expand=True);scroll=ttk.Scrollbar(frame);scroll.pack(side='right',fill='y');box=tk.Text(frame,wrap='word',font=('Segoe UI',12),yscrollcommand=scroll.set);box.pack(fill='both',expand=True);scroll.configure(command=box.yview)
   records=sorted(d['records'],key=lambda r:(r['trip'],r.get('date',''),r['vehicle'])) if self.optimal else [d]
-  labels={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Turnummer','date':'Dato','start_time':'Starttid','minutes':'Minutter','km':'Distanse (km)','liters':'Forbruk totalt (liter)','stops':'Unødige stopp','average_speed':'Gjennomsnittsfart (km/t)','fuel_per_100':'Manuelt forbruk (l/100 km)','teacher':'Lærer','notes':'Notater','completion':'Registreringsstatus','updated':'Oppdatert','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}
+  labels={'driver':'Elev','course':'Kurs','vehicle':'Bil','trip':'Turnummer','date':'Dato','start_time':'Starttid','end_time':'Sluttid','minutes':'Minutter','km':'Distanse (km)','liters':'Forbruk totalt (liter)','stops':'Unødige stopp','average_speed':'Gjennomsnittsfart (km/t)','fuel_per_100':'Manuelt forbruk (l/100 km)','teacher':'Lærer','notes':'Notater','completion':'Registreringsstatus','updated':'Oppdatert','trafikksikkerhet':'Trafikksikkerhet','avpassing':'Fartsavpassing','økning':'Fartsøkning','komfort':'Komfort'}
   for r in records:
    box.insert('end',trip_name(r['trip'])+'\n')
    for k,label in labels.items():
