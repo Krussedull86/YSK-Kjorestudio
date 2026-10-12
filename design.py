@@ -9,10 +9,25 @@ def classroom_class(Base):
   def __init__(self,root):
    self.ready=False;self.live_display=None;self.dashboard_display=None;self.last_cloud_update=None
    super().__init__(root)
-   root.title('YSK Kjørestudio · Klasserom');root.configure(bg=BG);root.geometry('1480x950')
+   root.title('YSK Kjørestudio · Sentral');root.configure(bg=BG);root.geometry('1480x950')
    style=ttk.Style();style.configure('.',background=BG,foreground=TEXT,font=('Segoe UI',10));style.configure('TFrame',background=BG);style.configure('TLabel',background=BG,foreground=TEXT);style.configure('TButton',padding=(12,8));style.configure('TEntry',fieldbackground=PANEL,foreground=TEXT,padding=7);style.configure('TCombobox',fieldbackground=PANEL,foreground=TEXT,padding=5);style.map('TCombobox',fieldbackground=[('readonly',PANEL)],foreground=[('readonly',TEXT)]);style.configure('TNotebook.Tab',padding=(16,10));style.configure('Treeview',rowheight=34)
    self.dashboard=tk.Frame(self.nb,bg=BG);self.nb.insert(0,self.dashboard,text='Klasserom');self.nb.select(self.dashboard);self.dashboard_display=LiveDisplay(self,self.dashboard,embedded=True)
-   self.install_rating_buttons();self.ready=True;self.refresh()
+   self.install_rating_buttons();self.install_central();self.ready=True;self.refresh()
+  def install_central(self):
+   home=ttk.Frame(self.nb,padding=24);self.nb.insert(0,home,text='Sentral');self.nb.select(home)
+   ttk.Label(home,text='YSK Kjørestudio · Sentral',font=('Segoe UI',26,'bold')).pack(anchor='w',pady=12)
+   ttk.Label(home,text='Registrer, hent og rediger turer. Administrer skolen. Gjennomgå alle elever i klasserommet.').pack(anchor='w',pady=8)
+   grid=ttk.Frame(home);grid.pack(fill='both',expand=True,pady=16)
+   def panel(name):
+    if hasattr(self,name):
+     obj=getattr(self,name);self.nb.select(obj.frame)
+     if name=='management':obj.load()
+   def new(retro=False):
+    self.reset();self.nb.select(self.register_frame)
+    if retro:self.editlabel.set('Etterregistrering · legg inn faktisk dato, starttid og målinger')
+   actions=[('Ny tur',lambda:new()),('Etterregistrer tur',lambda:new(True)),('Registrerte turer / rediger',lambda:panel('management')),('Klasserom · alle elever',lambda:self.nb.select(self.dashboard)),('Storskjerm',self.bigscreen),('Kursoppsett',lambda:self.setup_course()),('Turer, kurs og biler',lambda:panel('management')),('Turmaler og parameterbank',lambda:panel('template_panel')),('Papirskjema / PDF',lambda:self.template_panel.paper_forms()),('Admin · skoler og lærere',lambda:panel('admin_panel')),('Tilbakemeldinger / feil',lambda:panel('feedback_panel')),('Synkroniser nå',lambda:self.cloud_panel.sync()),('Oppdateringer',lambda:panel('updates_panel')),('Innlogging / sky',lambda:panel('cloud_panel'))]
+   for i,(label,fn) in enumerate(actions):ttk.Button(grid,text=label,command=fn).grid(row=i//3,column=i%3,sticky='ew',padx=8,pady=10)
+   for col in range(3):grid.columnconfigure(col,weight=1)
   def install_rating_buttons(self):
    for k in QUAL:
     row,col=self.rating_positions[k]
