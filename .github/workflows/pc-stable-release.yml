@@ -1,4 +1,4 @@
-name: YSK PC stable 1.13.1
+name: YSK PC stable 1.14.0
 on:
   push:
     branches: [main]
@@ -18,7 +18,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: windows
-          run-id: 38279937771
+          run-id: 38281687498
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: tested
       - name: Verify tested executable
@@ -26,10 +26,10 @@ jobs:
           python - <<'PY'
           import hashlib,pathlib
           data=pathlib.Path('tested/YSK_Kjorestudio.exe').read_bytes()
-          expected='db78a376e4468dc5691748a1d3c5cbb104ad9c4009889949149e12e8c35a39c0'
+          expected='da05e7d40b7e4287ff1504687742caae1e228e13476857dee75cff7b5363d659'
           if hashlib.sha256(data).hexdigest()!=expected:raise SystemExit('SHA-256 mismatch')
           p=pathlib.Path('stable');p.mkdir()
-          name='YSK_Kjorestudio_Windows_1.13.1.exe'
+          name='YSK_Kjorestudio_Windows_1.14.0.exe'
           (p/name).write_bytes(data)
           (p/'SHA256SUMS.txt').write_text(expected+'  '+name+'\n')
           PY
@@ -37,8 +37,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! gh release view v1.13.1 >/dev/null 2>&1; then
-            gh release create v1.13.1 --target "$GITHUB_SHA" --title "YSK Kjørestudio PC 1.13.1 – klasseoversikt og rangering" --notes-file marketing/pc-1.13.1.md --draft
+          if ! gh release view v1.14.0 >/dev/null 2>&1; then
+            gh release create v1.14.0 --target "$GITHUB_SHA" --title "YSK Kjørestudio PC 1.14.0 – Sentral" --notes-file marketing/pc-1.14.0.md --draft
           fi
-          gh release upload v1.13.1 stable/* --clobber
-          gh release edit v1.13.1 --draft=false --latest --notes-file marketing/pc-1.13.1.md
+          gh release upload v1.14.0 stable/* --clobber
+          gh release edit v1.14.0 --draft=false --latest --notes-file marketing/pc-1.14.0.md

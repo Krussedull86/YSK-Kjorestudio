@@ -45,7 +45,7 @@ def server(store):
 
 class App:
  def __init__(self,root):
-  self.root=root;self.store=Store(DATA/'ysk.db');self.edit_id=None;self.edit_distribution=None;self.display=None
+  self.root=root;self.store=Store(DATA/'ysk.db');self.edit_id=None;self.edit_distribution=None;self.display=None;self.form_generation=0
   if '--demo' in sys.argv and not self.store.all():
    from demo import seed
    seed(self.store)
@@ -126,6 +126,8 @@ class App:
   ttk.Button(settings,text='Lagre vekter',command=self.save_weights).grid(row=8,column=1,pady=12)
   explanation='Bra = 100, Middel = 50, Svak = 0.\nTallkriterier: lavest verdi i sammenligningsgruppen = 100, høyest = 0.\nLik verdi for alle = 100. Poeng er relativ rangering, ikke en faglig godkjenning.\nTomme felt = uferdig tur, lagres lokalt med rød prikk.\n- = bevisst utelatt. Slike turer vises uten samlet poeng; ingen manglende verdi regnes som null.\nSamlet poeng er vektet gjennomsnitt. Tid må aldri belønne utrygg kjøring.\nGjennomsnittsfart kan legges inn eller beregnes; forbruk per 10 km = 10 × liter / km; stopp normaliseres per km.\nFartsøkning vurderes med Bra, Middels eller Svak.\nAndroid-appen lagrer lokalt og sender via Supabase.\nData: '+str(DATA)
   ttk.Label(settings,text=explanation,justify='left').grid(row=0,column=2,rowspan=10,padx=30,sticky='nw')
+  from pc_workflow import PCWorkflow
+  self.workflow=PCWorkflow(self)
   root.protocol('WM_DELETE_WINDOW',self.close);self.refresh();root.after(2000,self.poll)
  def tree(self,parent,cols):
   box=ttk.Frame(parent);box.pack(fill='both',expand=True);t=ttk.Treeview(box,columns=cols,show='headings',height=10)
@@ -175,11 +177,16 @@ class App:
    self.compare_trips=[n for n,var in enumerate(values,1) if var.get()];self.refresh();dialog.destroy()
   ttk.Button(dialog,text='Bruk sammenligning',command=done).pack(pady=12)
  def reset(self):
+  self.form_generation=getattr(self,'form_generation',0)+1
+  if hasattr(self,'workflow'):
+   from pc_workflow import ElapsedClock
+   self.workflow.clock=ElapsedClock()
   self.edit_id=None;self.edit_distribution=None;self.edit_revision='';self.editlabel.set('Ny tur')
   for k,v in self.fields.items():
    if k not in ['course','vehicle']:v.set('' if k in QUAL else NAMES[0] if k=='trip' else '0' if k=='stops' else datetime.date.today().isoformat() if k=='date' else '')
  def save(self):
   try:
+   if hasattr(self,'workflow') and self.workflow.clock.started is not None:raise ValueError('Stopp tidtakingen før lagring.')
    d={k:v.get() for k,v in self.fields.items()};d['id']=self.edit_id;d['trip']=trip_number(d['trip'])
    if self.edit_distribution is not None:d['distribution']=self.edit_distribution
    if not self.edit_id and d['trip']>course_count(self.store,d['course']):raise ValueError('Denne turen er ikke aktivert på kurset.')
@@ -188,13 +195,17 @@ class App:
     raise ValueError('Skyredigering: fullfør feltene eller bruk - før lagring. Nye uferdige turer kan lagres lokalt.')
    if not missing_fields(validated) and hasattr(self,'management') and self.cloud_panel.receiver.load():
     self.management.save(d,getattr(self,'edit_revision',''));return
-   self.store.save(validated);self.reset();self.refresh();messagebox.showinfo('Lagret','Uferdig tur lagret lokalt – se rød prikk i turoversikten.' if missing_fields(validated) else 'Turen er lagret lokalt på PC.')
+   saved=self.store.save(validated);self.edit_id=saved['id'];self.refresh();self.editlabel.set('Lagret lokalt · uferdig tur' if missing_fields(validated) else 'Lagret lokalt · fortsett å redigere samme tur')
   except Exception as e:messagebox.showerror('Kunne ikke lagre',str(e))
  def edit(self):
   ids=self.table.selection()
   if not ids:return
   self.open_trip(next(d for d in self.store.all(True) if d['id']==ids[0]))
  def open_trip(self,d):
+  self.form_generation=getattr(self,'form_generation',0)+1
+  if hasattr(self,'workflow'):
+   from pc_workflow import ElapsedClock
+   self.workflow.clock=ElapsedClock()
   self.edit_id=d['id'];self.edit_distribution=d.get('distribution');self.edit_revision=''
   if hasattr(self,'cloud_panel'):
    remote=self.cloud_panel.receiver.remote(d['id']);self.edit_revision=remote.get('revision','') if remote else ''

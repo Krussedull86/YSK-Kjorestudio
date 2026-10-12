@@ -47,7 +47,7 @@ try {{
 class UpdatesPanel:
  def __init__(self,app,receiver,data):
   self.app=app;self.receiver=receiver;self.data=Path(data);self.queue=queue.Queue();self.busy=False;self.release=None;self.file=None;self.last=0;self.startup_checked=False
-  frame=ttk.Frame(app.nb,padding=24);app.nb.add(frame,text='Oppdateringer')
+  frame=ttk.Frame(app.nb,padding=24);self.frame=frame;app.nb.add(frame,text='Oppdateringer')
   ttk.Label(frame,text='Oppdateringer',font=('Segoe UI',25,'bold')).pack(anchor='w')
   ttk.Label(frame,text=f'Installert: {VERSION} · bygg {BUILD}\nAdmin velger dev eller stable for hver bruker. Oppdateringer installeres når du velger det.').pack(anchor='w',pady=12)
   self.status=tk.StringVar(value='Logg inn under Telefon / sky.');ttk.Label(frame,textvariable=self.status,wraplength=850).pack(anchor='w',pady=8)
